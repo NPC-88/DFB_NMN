@@ -1,31 +1,35 @@
-// Builds two self-contained pages (engine + fontkit + font inlined):
-//   dist/index.html  — web tool, opens straight from disk
-//   figma/ui.html    — Figma plugin UI
+// Builds the web tool (engine + fontkit inlined):
+//   docs/index.html     — GitHub Pages, WITHOUT the font (public repo; the page
+//                         asks for the font file once, see src/hosts/web.js)
+//   dist/index.html     — local copy with the font embedded, opens from disk
+//   dist/artifact.html  — the same for the private claude.ai page
+// The Figma plugin UI is not built for now (parked until the tool is final).
 import { build } from 'esbuild';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // `import b64 from 'font:NAME'` → the font file from fonts/ as base64.
-const fontPlugin = {
+// With embed = false it resolves to null.
+const fontPlugin = (embed) => ({
   name: 'font',
   setup(b) {
     b.onResolve({ filter: /^font:/ }, (a) => ({ path: join(root, 'fonts', a.path.slice(5)), namespace: 'font' }));
     b.onLoad({ filter: /.*/, namespace: 'font' }, (a) => ({
-      contents: `export default ${JSON.stringify(readFileSync(a.path).toString('base64'))};`,
+      contents: `export default ${embed ? JSON.stringify(readFileSync(a.path).toString('base64')) : 'null'};`,
       loader: 'js',
     }));
   },
-};
+});
 
-async function bundle(entry) {
+async function bundle(entry, embed = true) {
   const r = await build({
     entryPoints: [join(root, entry)],
     bundle: true, format: 'iife', platform: 'browser', target: 'es2020',
     minify: true, write: false, legalComments: 'none',
-    plugins: [fontPlugin],
+    plugins: [fontPlugin(embed)],
   });
   return r.outputFiles[0].text;
 }
@@ -42,8 +46,13 @@ const artifactPage = (html) => {
 };
 
 mkdirSync(join(root, 'dist'), { recursive: true });
+mkdirSync(join(root, 'docs'), { recursive: true });
 const web = page(await bundle('src/hosts/web.js'));
 writeFileSync(join(root, 'dist/index.html'), web);
 writeFileSync(join(root, 'dist/artifact.html'), artifactPage(web));
-writeFileSync(join(root, 'figma/ui.html'), page(await bundle('src/hosts/figma-ui.js')));
-console.log('built dist/index.html and figma/ui.html');
+writeFileSync(join(root, 'docs/index.html'), page(await bundle('src/hosts/web.js', false)));
+writeFileSync(join(root, 'docs/.nojekyll'), '');
+if (!existsSync(join(root, 'docs/library.json'))) writeFileSync(join(root, 'docs/library.json'), JSON.stringify({ format: 'dfb-pattern-library', version: 1, items: [] }, null, 2) + '\n');
+const fontB64 = readFileSync(join(root, 'fonts/DFB_SANS_VAR_Italic.ttf')).toString('base64');
+if (readFileSync(join(root, 'docs/index.html'), 'utf8').includes(fontB64.slice(1000, 1200))) throw new Error('docs/index.html contains the font');
+console.log('built docs/index.html (no font), dist/index.html, dist/artifact.html');

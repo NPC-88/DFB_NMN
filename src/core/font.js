@@ -80,8 +80,24 @@ export function createVarFont(fkFont, { features = ['kern'] } = {}) {
     return c;
   }
 
+  // Ink box of a glyph at a weight, font units ({xMin,xMax,yMin,yMax}; empty glyphs → null).
+  const boundsCache = new Map();
+  function bounds(gid, wght) {
+    const w = clampW(wght);
+    const key = gid + '@' + w;
+    let b = boundsCache.get(key);
+    if (b === undefined) {
+      const g = instance(w).getGlyph(gid);
+      b = g.path.commands.length ? (({ minX, maxX, minY, maxY }) => ({ xMin: minX, xMax: maxX, yMin: minY, yMax: maxY }))(g.path.bbox) : null;
+      if (boundsCache.size > 60000) boundsCache.clear();
+      boundsCache.set(key, b);
+    }
+    return b;
+  }
+
   return {
     family: fkFont.familyName,
+    bounds,
     familyCSS: (fkFont.getName && fkFont.getName('preferredFamily')) || 'DFB SANS VAR',
     postscriptName: fkFont.postscriptName,
     unitsPerEm: upm,

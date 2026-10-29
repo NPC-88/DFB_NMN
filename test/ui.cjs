@@ -1,35 +1,60 @@
-// Drives dist/index.html in Chromium: renders, switches units, toggles the field overlay, downloads the SVG.
+// Drives the built pages in Chromium. node test/ui.cjs
 const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs');
+const http = require('http');
 (async () => {
+  // serve docs/ like GitHub Pages
+  const srv = http.createServer((q, r) => { const f = path.join(__dirname, '../docs', decodeURIComponent(q.url.split('?')[0].split('#')[0]).replace(/\/$/, '/index.html')); fs.readFile(f, (e, d) => { r.writeHead(e ? 404 : 200); r.end(d); }); }).listen(8765);
   const b = await chromium.launch();
-  const pg = await b.newPage({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
   const errors = [];
+  const pg = await b.newPage({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
   pg.on('pageerror', (e) => errors.push(e.message));
-  pg.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await pg.goto('file://' + path.resolve(__dirname, '../dist/index.html'));
+  await pg.goto('http://localhost:8765/');
+  await pg.waitForSelector('#fontgate');
+  await pg.screenshot({ path: 'test/out/pages-fontgate.png' });
+  await pg.setInputFiles('#fontfile', 'fonts/DFB_SANS_VAR_Italic.ttf');
   await pg.waitForSelector('#art svg path');
-  console.log('status:', await pg.textContent('#status'));
-  await pg.screenshot({ path: 'test/out/ui-word.png' });
-  await pg.click('.row[data-key=unit] button[data-value=letter]');
-  await pg.waitForTimeout(300);
-  console.log('letter:', await pg.textContent('#status'));
-  await pg.click('#showField');
-  await pg.click('.row[data-key=unit] button[data-value=line]');
-  await pg.waitForTimeout(300);
-  console.log('line:', await pg.textContent('#status'));
-  await pg.screenshot({ path: 'test/out/ui-line-field.png' });
-  await pg.click('#showField');
-  // text edit
-  await pg.fill('.row[data-key=text] textarea', 'Mit dir. Für Deutschland.');
-  await pg.click('.row[data-key=unit] button[data-value=word]');
-  await pg.waitForTimeout(300);
-  console.log('short text:', await pg.textContent('#status'));
-  const [dl] = await Promise.all([pg.waitForEvent('download'), pg.click('#actions button')]);
-  const p = 'test/out/' + dl.suggestedFilename(); await dl.saveAs(p);
-  const svg = fs.readFileSync(p, 'utf8');
-  console.log('download:', p, svg.length, 'bytes; has <rect background>?', /<rect(?![^>]*clipPath)/.test(svg.replace(/<clipPath[\s\S]*?<\/clipPath>/, '')), 'fill:', svg.match(/fill="([^"]+)"/)[1]);
-  await pg.screenshot({ path: 'test/out/ui-short.png' });
+  console.log('pages, after font drop:', await pg.textContent('#status'));
+  await pg.reload(); await pg.waitForSelector('#art svg path', { timeout: 5000 });
+  console.log('pages, reload remembers font:', !(await pg.$('#fontgate')));
+  await pg.screenshot({ path: 'test/out/ui-main.png' });
+
+  // points mode + drag
+  await pg.click('.row[data-key="field.mode"] button[data-value=points]');
+  const box = await pg.locator('#gradient').boundingBox();
+  await pg.mouse.move(box.x + box.width * 0.25, box.y + box.height * 0.3); await pg.mouse.down();
+  await pg.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5, { steps: 5 }); await pg.mouse.up();
+  await pg.waitForTimeout(400);
+  console.log('points after drag:', JSON.stringify(await pg.evaluate(() => window.dfbPattern.params.field.points)));
+  await pg.check('#showField'); await pg.waitForTimeout(300);
+  await pg.screenshot({ path: 'test/out/ui-points.png' });
+  await pg.uncheck('#showField');
+
+  // library save + share link
+  await pg.fill('#lib-name', 'Test Welle'); await pg.click('.lib-save button');
+  console.log('library:', await pg.$$eval('.lib-list .lib-item', (x) => x.map((n) => n.textContent)));
+  const share = await pg.evaluate(() => window.dfbPattern.share());
+  const p2 = await b.newPage({ viewport: { width: 1200, height: 800 } });
+  p2.on('pageerror', (e) => errors.push(e.message));
+  await p2.goto('http://localhost:8765/' + share); await p2.setInputFiles('#fontfile', 'fonts/DFB_SANS_VAR_Italic.ttf'); await p2.waitForSelector('#art svg path');
+  console.log('share link opens same mode:', await p2.evaluate(() => window.dfbPattern.params.field.mode));
+
+  // zoom + format
+  await pg.selectOption('#ctl-format', 'square'); await pg.waitForTimeout(300);
+  await pg.click('#zoomIn'); await pg.click('#zoomIn');
+  console.log('zoom label:', await pg.textContent('#zoomLabel'));
+  await pg.click('#zoomFit');
+  const [dl] = await Promise.all([pg.waitForEvent('download'), pg.click('#download')]);
+  const out = 'test/out/' + dl.suggestedFilename(); await dl.saveAs(out);
+  console.log('download:', out, fs.statSync(out).size, 'bytes');
+  await pg.screenshot({ path: 'test/out/ui-square.png' });
+
+  // phone + local build
+  const ph = await b.newPage({ viewport: { width: 400, height: 800 } });
+  ph.on('pageerror', (e) => errors.push(e.message));
+  await ph.goto('file://' + path.resolve(__dirname, '../dist/index.html')); await ph.waitForSelector('#art svg path');
+  console.log('phone scrollWidth:', await ph.evaluate(() => document.documentElement.scrollWidth));
+  await ph.screenshot({ path: 'test/out/ui-phone.png', fullPage: false });
   console.log('errors:', errors);
-  await b.close();
+  await b.close(); srv.close();
 })();

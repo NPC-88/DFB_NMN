@@ -14,8 +14,16 @@ export const PALETTE = [
   { id: 'hellgold', name: 'DFB-Hellgold', hex: '#BAA98C', source: 'figma (NEU)' },
 ];
 
+// Colour pairs used in the Figma references: pattern colour on background.
+// Only the pattern colour is exported; the background is for the preview.
+export const COLOR_PAIRS = [
+  { id: 'gold', name: 'Hellgold auf Gold', color: '#BAA98C', background: '#A9936F' },
+  { id: 'graphit', name: 'Schwarz auf Graphit', color: '#000000', background: '#262626' },
+];
+
 export const FORMATS = [
   { id: 'fhd', name: '1920 × 1080', width: 1920, height: 1080 },
+  { id: 'square', name: '1000 × 1000', width: 1000, height: 1000 },
   { id: 'bus', name: 'Bus 2095 × 672', width: 2095, height: 672 },
   { id: 'bande', name: 'Bande 2095 × 504', width: 2095, height: 504 },
   { id: 'custom', name: 'Eigene Größe', width: null, height: null },
@@ -27,37 +35,25 @@ export const HYMNE_TEXT =
   'Einigkeit und Recht und Freiheit sind des Glückes Unterpfand – ' +
   'Blüh im Glanze dieses Glückes, blühe, deutsches Vaterland!';
 
-// Hymne: type settings from Figma 1:26 (34.285 px, line height 100 %,
-// tracking 1 %, 1560 px column in 1920 × 1080, weights 145 → 1000), with the
-// stepped stanza bands replaced by a generated, gently bent wave.
+// Hymne: 34.285 px as in Figma 1:26, weights 145 → 1000, fixed line height 1
+// and tracking 0; the gradient is HUK's parametric default.
 export const HYMNE = {
   id: 'hymne',
   name: 'Hymne',
-  color: '#BAA98C',            // Hellgold — as on the Gold reference
-  previewBackground: '#A9936F',
+  colorPair: 'gold',
   params: {
     text: HYMNE_TEXT,
-    uppercase: true,
-    keepLineBreaks: false,
-    repeat: 'fill',
-    repeatCount: 3,
-    separator: ' ',
     width: 1920, height: 1080,
     fontSize: 34.285,
-    lineHeight: 1.0,
-    tracking: 0.01,
-    boxX: 0, boxY: -3, boxWidth: 1560,
-    overflow: 'wrap',
     unit: 'word',
     minWeight: 145, maxWeight: 1000,
     reverse: false,
-    steps: 0,
     field: {
-      shape: 'waves', waveform: 'sine',
-      angle: 90, bands: 1.5, phase: 0,
-      wobble: 0.08, wobbleFreq: 1, wobblePhase: 0,
-      curve: 0, cx: 0.5, cy: 0.5,
-      contrast: 0, offset: 0,
+      mode: 'parametric',
+      waves: 0.4, curve: 0.5, rotate: 0.2,
+      size: 0.5,
+      points: [{ x: 0.25, y: 0.3, r: 0.18 }, { x: 0.7, y: 0.65, r: 0.22 }],
+      contrast: 0, offset: 0.5,
     },
   },
 };

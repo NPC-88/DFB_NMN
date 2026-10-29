@@ -33,12 +33,14 @@ export function toSVG(model, font, { color = '#000000', mode = 'outlines', clip 
     const hidden = mode === 'both' ? ' display="none"' : '';
     out.push(`<g id="${ids('Text_editierbar')}" fill="${color}"${clipAttr}${hidden}>`);
     model.lines.forEach((line, li) => {
-      out.push(`<text id="${ids('Text_Zeile_' + pad(li + 1))}" xml:space="preserve" font-family="${esc(font.familyCSS)}, '${esc(font.family)}'" font-style="italic" font-size="${num(model.fontSize, 3)}" letter-spacing="${num(model.tracking, 3)}" y="${num(line.baseline, precision)}">`);
+      out.push(`<text id="${ids('Text_Zeile_' + pad(li + 1))}" xml:space="preserve" font-family="${esc(font.familyCSS)}, '${esc(font.family)}'" font-style="italic" font-size="${num(model.fontSize, 3)}" y="${num(line.baseline, precision)}">`);
       for (const run of line.runs) {
-        if (run.weight != null) {
-          out.push(tspan(run.text, run.x, run.weight, precision));
+        // justified rows: every character gets its own x
+        const oneCharGlyphs = run.glyphs.every((g) => [...g.chars].length === 1);
+        if (run.weight != null && oneCharGlyphs) {
+          out.push(tspan(run.glyphs.map((g) => g.chars).join(''), run.glyphs.map((g) => num(g.x, precision)).join(' '), run.weight));
         } else {
-          for (const g of run.glyphs) out.push(tspan(g.chars, g.x, g.weight, precision));
+          for (const g of run.glyphs) out.push(tspan(g.chars, num(g.x, precision), g.weight));
         }
       }
       out.push('</text>');
@@ -72,9 +74,9 @@ export function runPath(run, baseline, scale, font, precision = 2) {
   return parts.join('');
 }
 
-function tspan(text, x, weight, precision) {
+function tspan(text, xs, weight) {
   const w = Math.round(weight);
-  return `<tspan x="${num(x, precision)}" font-weight="${w}" style="font-variation-settings:'wght' ${w}">${esc(text)}</tspan>`;
+  return `<tspan x="${xs}" font-weight="${w}" style="font-variation-settings:'wght' ${w}">${esc(text)}</tspan>`;
 }
 
 // Layer names: the word and its weight (or weight range for letter mode).

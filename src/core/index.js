@@ -13,7 +13,7 @@ import { layoutPattern, LAYOUT_DEFAULTS, toWeight } from './layout.js';
 import { createField, FIELD_DEFAULTS } from './field.js';
 import { toSVG, runPath } from './svg.js';
 
-export { PALETTE, FORMATS, PRESETS, HYMNE, HYMNE_TEXT } from './presets.js';
+export { PALETTE, COLOR_PAIRS, FORMATS, PRESETS, HYMNE, HYMNE_TEXT } from './presets.js';
 export { SCHEMA, getPath, setPath } from './schema.js';
 export { LAYOUT_DEFAULTS, FIELD_DEFAULTS, createField, toWeight };
 

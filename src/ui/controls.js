@@ -1,24 +1,23 @@
-// Generic control renderer: turns SCHEMA entries into plain DOM inputs.
-// Placeholder UI — to adopt a UI kit, replace the `make*` functions (one per
-// schema `type`); the app logic does not depend on how controls look.
+// Generic control renderer: turns SCHEMA sections into collapsible panels of
+// plain inputs. Placeholder UI — to adopt a UI kit, replace the `make*`
+// branches (one per schema `type`); the app logic does not depend on them.
 
 import { getPath } from '../core/schema.js';
 
 export function renderControls(root, schema, ctx) {
-  // ctx: { get(): params, set(key, value), formats, onFormat(id) }
-  root.innerHTML = '';
+  // ctx: { get(): params, set(key, value), formats, formatOf(params), onFormat(id) }
   const rows = [];
   for (const section of schema) {
-    const fs = el('fieldset', { class: 'group' });
-    fs.append(el('legend', {}, section.group));
+    const box = panel(section.group, section.open);
     for (const c of section.controls) {
-      const row = el('div', { class: 'row', 'data-key': c.key });
+      const row = el('div', { class: 'row' + (c.type === 'textarea' ? ' wide' : ''), 'data-key': c.key });
       const input = make(c, ctx);
-      row.append(el('label', { class: 'label' }, c.label), input.node);
-      fs.append(row);
+      if (c.type !== 'textarea') row.append(el('label', { class: 'label' }, c.label));
+      row.append(input.node);
+      box.body.append(row);
       rows.push({ c, row, input });
     }
-    root.append(fs);
+    root.append(box.node);
   }
   const sync = () => {
     const p = ctx.get();
@@ -31,24 +30,32 @@ export function renderControls(root, schema, ctx) {
   return { sync };
 }
 
+// Collapsible section (native <details>, + / − marker in CSS).
+export function panel(title, open = true) {
+  const node = el('details', { class: 'panel' });
+  node.open = open;
+  node.append(el('summary', {}, title));
+  const body = el('div', { class: 'panel-body' });
+  node.append(body);
+  return { node, body };
+}
+
 function make(c, ctx) {
   switch (c.type) {
     case 'textarea': {
-      const t = el('textarea', { rows: 5, spellcheck: 'false' });
+      const t = el('textarea', { rows: 6, spellcheck: 'false', id: 'ctl-' + c.key.replace(/\W/g, '-'), 'aria-label': c.label });
       t.addEventListener('input', () => ctx.set(c.key, t.value));
       return { node: t, set: (v) => { if (document.activeElement !== t) t.value = v ?? ''; } };
     }
     case 'toggle': {
-      const t = el('input', { type: 'checkbox' });
+      const t = el('input', { type: 'checkbox', id: 'ctl-' + c.key.replace(/\W/g, '-') });
       t.addEventListener('change', () => ctx.set(c.key, t.checked));
       return { node: t, set: (v) => { t.checked = !!v; } };
     }
-    case 'select':
     case 'format': {
-      const opts = c.type === 'format' ? ctx.formats.map((f) => [f.id, f.name]) : c.options;
-      const s = el('select');
-      for (const [v, l] of opts) s.append(el('option', { value: v }, l));
-      s.addEventListener('change', () => (c.type === 'format' ? ctx.onFormat(s.value) : ctx.set(c.key, s.value)));
+      const s = el('select', { id: 'ctl-format' });
+      for (const f of ctx.formats) s.append(el('option', { value: f.id }, f.name));
+      s.addEventListener('change', () => ctx.onFormat(s.value));
       return { node: s, set: (v) => { s.value = v; } };
     }
     case 'segmented': {
@@ -62,26 +69,19 @@ function make(c, ctx) {
       return { node: wrap, set: (v) => btns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === v))) };
     }
     case 'number': {
-      const n = el('input', { type: 'number', min: c.min, max: c.max, step: c.step });
-      n.addEventListener('change', () => { const v = parseFloat(n.value); if (Number.isFinite(v)) ctx.set(c.key, v); });
+      const n = el('input', { type: 'number', min: c.min, max: c.max, step: c.step, id: 'ctl-' + c.key });
+      n.addEventListener('change', () => { const v = parseFloat(n.value); if (Number.isFinite(v)) ctx.set(c.key, Math.min(c.max, Math.max(c.min, v))); });
       return { node: n, set: (v) => { if (document.activeElement !== n) n.value = v; } };
     }
     case 'range':
     default: {
       const wrap = el('div', { class: 'range' });
-      const r = el('input', { type: 'range', min: c.min, max: c.max, step: c.step });
-      const n = el('input', { type: 'number', min: c.min, step: c.step, class: 'value' });
-      wrap.append(r, n);
-      r.addEventListener('input', () => { n.value = r.value; ctx.set(c.key, parseFloat(r.value)); });
-      n.addEventListener('change', () => { const v = parseFloat(n.value); if (Number.isFinite(v)) ctx.set(c.key, v); });
-      return {
-        node: wrap,
-        set: (v, p) => {
-          if (c.maxFrom) r.max = getPath(p, c.maxFrom);
-          r.value = v;
-          if (document.activeElement !== n) n.value = v;
-        },
-      };
+      const r = el('input', { type: 'range', min: c.min, max: c.max, step: c.step, id: 'ctl-' + c.key.replace(/\W/g, '-') });
+      const out = el('output', { class: 'value' });
+      wrap.append(r, out);
+      const show = (v) => { out.textContent = c.step >= 1 ? Math.round(v) : (+v).toFixed(c.step < 0.01 ? 3 : 2); };
+      r.addEventListener('input', () => { show(r.value); ctx.set(c.key, parseFloat(r.value)); });
+      return { node: wrap, set: (v) => { r.value = v; show(v); } };
     }
   }
 }

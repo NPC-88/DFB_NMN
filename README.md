@@ -9,39 +9,33 @@ First preset: **Hymne** (based on the Figma section *Männer Nationalmannschaft 
 
 ## Use
 
+**Team link (GitHub Pages):** `https://npc-88.github.io/DFB_NMN/` — served from `docs/`.
+The public page does not contain the licensed font: on first visit it asks for
+`DFB_SANS_VAR_Italic.ttf` (brand package › 03_DFB-Maenner-NM_Typografie › DFB_SANS_VAR_23 ›
+DFB_SANS_VAR) and the browser remembers it.
+
 ```bash
 npm install
-npm run build      # unpacks the font from Archive.zip, builds dist/index.html and figma/ui.html
+npm run build      # docs/ (Pages, no font), dist/index.html + dist/artifact.html (font embedded)
 npm test
 ```
 
-- **Web:** open `dist/index.html` (self-contained, works from disk).
-- **Online (internal):** `dist/artifact.html` is published as a private claude.ai page
-  (only the owner can open it until it is shared from the page's Share menu). SVG saving there
-  goes through the page's `downloads` permission; the viewer confirms each file.
-- **Figma:** *Plugins → Development → Import plugin from manifest…* → `figma/manifest.json`
-  (after `npm run build`).
+### What the tool does
 
-### Controls
-
-| Group | Controls |
-|---|---|
-| Text | text (one word to a long passage), capitals, keep line breaks, repeat: fill the frame / count |
-| Komposition | format (1920×1080, Bus 2095×672, Bande 2095×504, custom), font size, line height, tracking, column width, offset X/Y, row end: ragged in column / run over the edge |
-| Welle | **weight per line / word / letter**, lightest and heaviest weight, direction (less → more or more → less), shape (waves / single gradient), waveform (soft / linear), number of waves, direction angle, shift, bend + number of bends + bend shift, rounding (radial) + centre, contrast, lighter ↔ heavier, steps (0 = stepless) |
-| Farbe | pattern colour (palette only), preview background (**not exported**), show the wave as an overlay |
-
-### Export
-
-- **Pfade (skalierbar)** — every word is one outlined `<path>` at its exact weight, grouped per
-  row (`Zeile_01`, …) and named after the word and its weight (`EINIGKEIT_537`). Scales anywhere,
-  needs no font, recolour via one fill.
-- **Pfade + editierbarer Text** — same, plus the live text as a hidden layer (`Text_editierbar`).
-- **Nur editierbarer Text** — `<text>`/`<tspan>` per unit with `font-variation-settings: 'wght' N`.
-
-Figma plugin: *Einfügen: Pfade* (exact), *Einfügen: Text (stufenlos)* (one text layer per row,
-weights bound to FLOAT variables in a collection „DFB Pattern Gewichte“, 5-unit steps),
-*Einfügen: Text (4 Schnitte)* (nearest of Light/Regular/Bold/Black Italic), *SVG herunterladen*.
+- Repeats the text in capitals until it **fills the format exactly**: the ink starts in the
+  top-left corner, every row is justified to the full width (word spacing), and rows are spread
+  so the last one sits on the bottom edge. Nothing is cut. Line height 1 (minimum) and tracking 0
+  are fixed.
+- **Verlauf** (gradient), always visible, ported from the HUK pattern generator:
+  *Parametrisch* (Wellen, Kurve, Drehung) and *Punkte* (drag points; click adds, double-click
+  removes, mouse wheel changes size). Plus Kontrast and Leichter ↔ schwerer. Dark = heavy.
+- **Gewicht je** Zeile / Wort / Buchstabe, Umkehren, lightest/heaviest weight.
+- **Format** presets or custom size, Schriftgröße; preview zoom (− / + / Einpassen / 100 %).
+- **Farbe:** Hellgold auf Gold, Schwarz auf Graphit (as in Figma). Export = pattern colour only.
+- **Bibliothek:** save settings by name (this browser), *Link kopieren* (the link opens exactly
+  that pattern for anyone), export/import as JSON. The **Team** list is `docs/library.json`:
+  add entries there (export from the tool, paste the items) and everyone sees them.
+- **Export:** SVG as outlined paths (exact weights), paths + hidden live text, or live text only.
 
 ## Structure
 
@@ -54,8 +48,9 @@ src/core/          pattern engine — no DOM; runs in browser, Figma UI and Node
   presets.js       palette, formats, Hymne preset (values from the supplied material)
   schema.js        every control: type, range, label — UIs render from this
   index.js         createEngine(fontBytes) → { layout, svg, fieldGrid, font }
-src/ui/            placeholder UI (generic controls from the schema + preview)
-src/hosts/         web.js (download) · figma-ui.js (talks to figma/code.js)
+src/ui/            placeholder UI: controls from the schema, gradient panel, library, zoom
+src/hosts/         web.js (font loading, saving) · figma-ui.js (parked)
+docs/              GitHub Pages build + library.json (team library)
 figma/             manifest.json, code.js (canvas side); ui.html is built
 scripts/           build.mjs (esbuild, inlines everything), fonts.mjs (unpacks the font)
 test/              node:test suites (engine, Figma plugin against a mock API) + render helpers
