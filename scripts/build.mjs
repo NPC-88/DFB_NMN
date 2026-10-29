@@ -33,7 +33,17 @@ async function bundle(entry) {
 const shell = readFileSync(join(root, 'src/ui/shell.html'), 'utf8');
 const page = (js) => shell.replace('<script>/*__APP__*/</script>', () => `<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`);
 
+// claude.ai artifact: the host wraps the page in its own <html>/<head>/<body>,
+// so publish only title, metas, style and body content.
+const artifactPage = (html) => {
+  const head = html.match(/<head>([\s\S]*?)<\/head>/)[1].replace(/<meta (charset|name="viewport")[^>]*>\s*/g, '');
+  const body = html.match(/<body>([\s\S]*)<\/body>/)[1];
+  return head.trim() + '\n' + body.trim() + '\n';
+};
+
 mkdirSync(join(root, 'dist'), { recursive: true });
-writeFileSync(join(root, 'dist/index.html'), page(await bundle('src/hosts/web.js')));
+const web = page(await bundle('src/hosts/web.js'));
+writeFileSync(join(root, 'dist/index.html'), web);
+writeFileSync(join(root, 'dist/artifact.html'), artifactPage(web));
 writeFileSync(join(root, 'figma/ui.html'), page(await bundle('src/hosts/figma-ui.js')));
 console.log('built dist/index.html and figma/ui.html');

@@ -16,6 +16,9 @@ npm test
 ```
 
 - **Web:** open `dist/index.html` (self-contained, works from disk).
+- **Online (internal):** `dist/artifact.html` is published as a private claude.ai page
+  (only the owner can open it until it is shared from the page's Share menu). SVG saving there
+  goes through the page's `downloads` permission; the viewer confirms each file.
 - **Figma:** *Plugins → Development → Import plugin from manifest…* → `figma/manifest.json`
   (after `npm run build`).
 
