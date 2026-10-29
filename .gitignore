@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+# licensed font: kept only inside Archive.zip, unpacked by `npm run fonts`
+fonts/
+# build outputs embed the font
+dist/
+figma/ui.html
+test/out/
