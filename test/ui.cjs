@@ -10,13 +10,9 @@ const http = require('http');
   const pg = await b.newPage({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
   pg.on('pageerror', (e) => errors.push(e.message));
   await pg.goto('http://localhost:8765/');
-  await pg.waitForSelector('#fontgate');
-  await pg.screenshot({ path: 'test/out/pages-fontgate.png' });
-  await pg.setInputFiles('#fontfile', 'fonts/DFB_SANS_VAR_Italic.ttf');
+  console.log('no font screen:', !(await pg.$('#fontgate')));
   await pg.waitForSelector('#art svg path');
-  console.log('pages, after font drop:', await pg.textContent('#status'));
   await pg.reload(); await pg.waitForSelector('#art svg path', { timeout: 5000 });
-  console.log('pages, reload remembers font:', !(await pg.$('#fontgate')));
   await pg.screenshot({ path: 'test/out/ui-main.png' });
 
   // points mode + drag
@@ -36,7 +32,7 @@ const http = require('http');
   const share = await pg.evaluate(() => window.dfbPattern.share());
   const p2 = await b.newPage({ viewport: { width: 1200, height: 800 } });
   p2.on('pageerror', (e) => errors.push(e.message));
-  await p2.goto('http://localhost:8765/' + share); await p2.setInputFiles('#fontfile', 'fonts/DFB_SANS_VAR_Italic.ttf'); await p2.waitForSelector('#art svg path');
+  await p2.goto('http://localhost:8765/' + share); await p2.waitForSelector('#art svg path');
   console.log('share link opens same mode:', await p2.evaluate(() => window.dfbPattern.params.field.mode));
 
   // zoom + format

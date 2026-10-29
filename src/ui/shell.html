@@ -86,10 +86,6 @@ button.primary { background: var(--accent); color: var(--on-accent); }
 .export { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
 #message { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--accent); color: var(--on-accent); padding: 10px 14px; border-radius: var(--radius); max-width: calc(100% - 32px); z-index: 5; }
 
-#fontgate { position: fixed; inset: 0; background: var(--bg); display: grid; place-items: center; z-index: 10; padding: 16px; }
-#fontgate .card { max-width: 440px; display: flex; flex-direction: column; gap: 10px; }
-#fontgate .drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 24px; text-align: center; color: var(--muted); }
-#fontgate .drop.over { border-color: var(--accent); color: var(--ink); }
 
 @media (max-width: 820px) {
   body { grid-template-columns: minmax(0, 1fr); grid-template-rows: 45vh auto; height: auto; min-height: 100%; }
