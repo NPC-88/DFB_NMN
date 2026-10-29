@@ -1,6 +1,5 @@
 // Builds the web tool (engine + fontkit inlined):
-//   docs/index.html     — GitHub Pages, WITHOUT the font (public repo; the page
-//                         asks for the font file once, see src/hosts/web.js)
+//   docs/index.html     — GitHub Pages, font embedded (the team decided to publish it)
 //   dist/index.html     — local copy with the font embedded, opens from disk
 //   dist/artifact.html  — the same for the private claude.ai page
 // The Figma plugin UI is not built for now (parked until the tool is final).
@@ -50,9 +49,7 @@ mkdirSync(join(root, 'docs'), { recursive: true });
 const web = page(await bundle('src/hosts/web.js'));
 writeFileSync(join(root, 'dist/index.html'), web);
 writeFileSync(join(root, 'dist/artifact.html'), artifactPage(web));
-writeFileSync(join(root, 'docs/index.html'), page(await bundle('src/hosts/web.js', false)));
+writeFileSync(join(root, 'docs/index.html'), web);
 writeFileSync(join(root, 'docs/.nojekyll'), '');
 if (!existsSync(join(root, 'docs/library.json'))) writeFileSync(join(root, 'docs/library.json'), JSON.stringify({ format: 'dfb-pattern-library', version: 1, items: [] }, null, 2) + '\n');
-const fontB64 = readFileSync(join(root, 'fonts/DFB_SANS_VAR_Italic.ttf')).toString('base64');
-if (readFileSync(join(root, 'docs/index.html'), 'utf8').includes(fontB64.slice(1000, 1200))) throw new Error('docs/index.html contains the font');
-console.log('built docs/index.html (no font), dist/index.html, dist/artifact.html');
+console.log('built docs/index.html, dist/index.html, dist/artifact.html');

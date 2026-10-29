@@ -10,13 +10,11 @@ First preset: **Hymne** (based on the Figma section *Männer Nationalmannschaft 
 ## Use
 
 **Team link (GitHub Pages):** `https://npc-88.github.io/DFB_NMN/` — served from `docs/`.
-The public page does not contain the licensed font: on first visit it asks for
-`DFB_SANS_VAR_Italic.ttf` (brand package › 03_DFB-Maenner-NM_Typografie › DFB_SANS_VAR_23 ›
-DFB_SANS_VAR) and the browser remembers it.
+The font is embedded in the page (team decision), so it opens ready to use.
 
 ```bash
 npm install
-npm run build      # docs/ (Pages, no font), dist/index.html + dist/artifact.html (font embedded)
+npm run build      # docs/ (Pages), dist/index.html + dist/artifact.html (font embedded)
 npm test
 ```
 
