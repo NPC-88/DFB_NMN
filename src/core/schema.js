@@ -11,6 +11,7 @@ export const SCHEMA = [
   ] },
   { group: 'Typografie', id: 'type', open: true, controls: [
     { key: 'align', type: 'segmented', label: 'Zeilenende', options: [['cut', 'Angeschnitten'], ['ragged', 'Flattersatz'], ['justify', 'Bündig']] },
+    { key: 'fontSize', type: 'range', label: 'Schriftgröße', min: 8, max: 300, step: 0.5, unit: 'px' },
     { key: 'lineHeight', type: 'range', label: 'Zeilenabstand', min: 1, max: 1.6, step: 0.01, unit: '×' },
   ] },
   { group: 'Verlauf', id: 'gradient', open: true, controls: [

@@ -79,7 +79,7 @@ const path = require('path'); const fs = require('fs'); const http = require('ht
   await pg.click('.modes button[data-value=waves]');
   for (const a of ['ragged', 'justify', 'cut']) { await pg.click(`.row[data-key=align] button[data-value=${a}]`); await pg.waitForTimeout(150); }
   await pg.click('#formatBtn'); await pg.click('#formatList .menu-item[data-id=square]');
-  await pg.fill('#fontSizeNum', '60'); await pg.locator('#fontSizeNum').dispatchEvent('change');
+  await pg.locator('#ctl-fontSize').fill('60'); await pg.locator('#ctl-fontSize').dispatchEvent('change');
   await pg.waitForTimeout(300);
   log('format/size:', JSON.stringify((({ width, height, fontSize, align }) => ({ width, height, fontSize, align }))(await P())));
   await pg.screenshot({ path: 'test/out/v3-square.png' });
@@ -113,7 +113,7 @@ const path = require('path'); const fs = require('fs'); const http = require('ht
   await pg.locator('#ctl-field-phase').fill('0.5'); await pg.locator('#ctl-field-phase').dispatchEvent('change');
   await pg.locator('#ctl-field-angle').fill('40'); await pg.locator('#ctl-field-angle').dispatchEvent('change');
   await pg.click('#markMoment');
-  log('moments:', await pg.textContent('#momentCount'), '| tab badge:', await pg.textContent('#animCount'));
+  log('moments:', await pg.textContent('#momentBadge'), '| tab badge:', await pg.textContent('#animCount'));
   await pg.screenshot({ path: 'test/out/v4-tool.png' });
   await pg.click('[role=tab][data-tab=animation]');
   await pg.waitForTimeout(300);

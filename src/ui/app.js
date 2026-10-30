@@ -133,16 +133,12 @@ export function startApp({ fontBytes, host, store }) {
   const editorRoot = el('div', { class: 'grad-editor' });
   gradBody.prepend(editorRoot);
   // "Moment merken": the current gradient becomes a keyframe for the Animation tab.
-  const momentRow = el('div', { class: 'moment-row' });
-  const momentBtn = el('button', { type: 'button', class: 'btn btn-secondary btn-small', id: 'markMoment' });
-  momentBtn.append(icon('moment', 18), document.createTextNode('Moment merken'));
-  const momentCount = el('span', { class: 'hint', id: 'momentCount' });
-  momentRow.append(momentBtn, momentCount);
-  gradBody.prepend(momentRow);
+  const momentBtn = $('#markMoment');
   momentBtn.addEventListener('click', () => {
     const n = anim.moments.length;
     setAnim({ moments: [...anim.moments, { field: clone(params.field) }], durations: [...anim.durations.slice(0, n), 2] });
-    flash(`Gemerkt: Moment ${n + 1}` + (n + 1 < 2 ? ' — noch einen Moment merken, dann bewegt es sich (Tab „Animation“).' : ' — zu sehen im Tab „Animation“.'), 'success');
+    momentBtn.classList.remove('flash'); void momentBtn.offsetWidth; momentBtn.classList.add('flash');
+    flash(`Moment ${n + 1} aufgenommen` + (n + 1 < 2 ? ' — Verlauf ändern und noch einen aufnehmen: die Animation blendet zwischen den Momenten (Tab „Animation“).' : ' — im Tab „Animation“ abspielen und exportieren.'), 'success');
   });
   function setAnim(patch, opts = {}) {
     anim = { ...anim, ...patch };
@@ -153,7 +149,7 @@ export function startApp({ fontBytes, host, store }) {
   }
   function syncMoments() {
     const n = anim.moments.length;
-    momentCount.textContent = n ? `${n} ${n === 1 ? 'Moment' : 'Momente'} gemerkt` : '';
+    $('#momentBadge').textContent = n ? String(n) : '';
     $('#animCount').textContent = n ? String(n) : '';
   }
 
@@ -169,10 +165,6 @@ export function startApp({ fontBytes, host, store }) {
   $('#zoomFit').addEventListener('click', () => { zoom = 'fit'; layoutStage(); });
   $('#zoom100').addEventListener('click', () => { zoom = 1; layoutStage(); });
   new ResizeObserver(() => layoutStage()).observe(viewport);
-  const fsRange = $('#fontSize'), fsNum = $('#fontSizeNum');
-  fsRange.addEventListener('input', () => set('fontSize', +fsRange.value, { transient: true }));
-  fsRange.addEventListener('change', () => set('fontSize', +fsRange.value));
-  fsNum.addEventListener('change', () => { const v = Math.min(400, Math.max(4, +fsNum.value)); if (v) set('fontSize', v); });
 
   // --- reset, export ---------------------------------------------------------
   $('#reset').addEventListener('click', () => { params = clone(preset.params); pairId = preset.colorPair; anim = clone(ANIM_DEFAULTS); zoom = 'fit'; window.history.replaceState(null, '', location.pathname); update(); });
@@ -249,9 +241,6 @@ export function startApp({ fontBytes, host, store }) {
     fmtList.querySelectorAll('.menu-item').forEach((b) => b.setAttribute('aria-pressed', String(f && b.dataset.id === f.id)));
     if (document.activeElement !== fw) fw.value = params.width;
     if (document.activeElement !== fh) fh.value = params.height;
-    fsRange.value = params.fontSize;
-    fsRange.style.setProperty('--fill', ((params.fontSize - fsRange.min) / (fsRange.max - fsRange.min)) * 100 + '%');
-    if (document.activeElement !== fsNum) fsNum.value = +params.fontSize.toFixed(2);
     if (queued) return;
     queued = true;
     requestAnimationFrame(() => { queued = false; render(); });

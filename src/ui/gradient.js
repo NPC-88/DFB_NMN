@@ -24,7 +24,7 @@ export function createGradientEditor(root, ctx) {
   const types = chips(null, [['linear', 'Linear'], ['radial', 'Radial']], (v) => ctx.setField({ type: v }), { small: true });
   const flip = iconButton('flip', 'Verlauf umkehren');
   const turn = iconButton('rotate', 'Um 90° drehen');
-  typeBar.append(types.node, el('span', { class: 'spacer' }), flip, turn);
+  typeBar.append(types.node);
 
   const stage = el('div', { class: 'grad-stage' });
   const canvas = el('canvas', { width: 240, height: 135, class: 'grad-canvas' });
@@ -41,7 +41,7 @@ export function createGradientEditor(root, ctx) {
   const stopLabel = stopSlider.node.querySelector('label');
   const stopDel = iconButton('remove', 'Stopp löschen');
   const stopAdd = iconButton('add', 'Stopp hinzufügen');
-  stopRow.append(stopSlider.node, stopDel, stopAdd);
+  stopRow.append(stopSlider.node, stopDel, stopAdd, flip, turn);
 
   root.append(modes.node, typeBar, stage, stopsWrap, stopRow);
 
@@ -212,7 +212,7 @@ export function createGradientEditor(root, ctx) {
     const fld = f();
     modes.set(fld.mode);
     types.set(fld.type);
-    types.node.hidden = fld.mode !== 'parametric';
+    typeBar.hidden = fld.mode !== 'parametric';
     turn.hidden = fld.mode === 'points';
     drawCanvas();
     drawOverlay();
