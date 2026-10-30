@@ -168,11 +168,10 @@ export function startApp({ fontBytes, host, store }) {
 
   // --- reset, export ---------------------------------------------------------
   $('#reset').addEventListener('click', () => { params = clone(preset.params); pairId = preset.colorPair; anim = clone(ANIM_DEFAULTS); zoom = 'fit'; window.history.replaceState(null, '', location.pathname); update(); });
-  $('#exportMode').addEventListener('change', (e) => { $('#exportLabel').textContent = e.target.selectedOptions[0].textContent; });
   $('#download').addEventListener('click', async () => {
     if (!model) render();
     const name = `DFB-${preset.name}-${params.field.mode}-${params.width}x${params.height}`;
-    const svg = engine.svg(model, { color: pair().color, mode: $('#exportMode').value, title: name });
+    const svg = engine.svg(model, { color: pair().color, mode: 'outlines', title: name });
     flash(await host.save({ filename: name + '.svg', data: svg }));
   });
 
@@ -247,15 +246,10 @@ export function startApp({ fontBytes, host, store }) {
   }
 
   function render() {
-    const t0 = performance.now();
     model = engine.layout(params);
     art.innerHTML = engine.svg(model, { color: pair().color, mode: 'outlines', precision: 1 });
     stage.style.background = pair().background;
     layoutStage();
-    const ws = model.lines.flatMap((l) => l.runs.flatMap((r) => r.glyphs.map((g) => g.weight)));
-    $('#status').textContent = ws.length
-      ? `${params.width} × ${params.height} · ${model.lines.length} Zeilen · wght ${Math.min(...ws)}–${Math.max(...ws)} · ${Math.round(performance.now() - t0)} ms`
-      : 'Kein Text';
   }
 
   function layoutStage() {

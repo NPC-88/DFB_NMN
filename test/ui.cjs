@@ -28,7 +28,7 @@ const path = require('path'); const fs = require('fs'); const http = require('ht
 
   await pg.goto('http://localhost:8765/');
   await pg.waitForSelector('#art svg path');
-  log('opens directly:', !(await pg.$('#fontgate')), '|', await pg.textContent('#status'));
+  log('opens directly:', !(await pg.$('#fontgate')));
   await pg.screenshot({ path: 'test/out/v3-waves.png' });
 
   // stops: add by clicking the bar, drag it, flip

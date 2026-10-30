@@ -77,7 +77,7 @@ body { font: var(--fs-body)/1.4 var(--font-ui); color: var(--fg); background: va
 [data-tip]:hover::before, [data-tip]:focus-visible::before {
   content: ""; position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-bottom-color: var(--fg); border-top: 0; z-index: 20; }
 
-#download[data-tip]::after, .topbar .group:last-child [data-tip]:hover::after { left: auto; right: 0; transform: none; }
+#download[data-tip]:hover::after, .topbar .group:last-child [data-tip]:hover::after { left: auto; right: 0; transform: none; }
 .previewbar [data-tip]:hover::after, .previewbar [data-tip]:focus-visible::after { top: auto; bottom: calc(100% + 8px); }
 .previewbar [data-tip]:hover::before, .previewbar [data-tip]:focus-visible::before { top: auto; bottom: calc(100% + 3px); border-bottom: 0; border-top: 5px solid var(--fg); }
 /* --- Top bar + Tab Bar (static) --- */
@@ -305,15 +305,7 @@ dialog.modal::backdrop { background: #0000004d; }
   </nav>
   <span class="spacer"></span>
   <div class="group tool-only">
-    <label class="dropdown">
-      <span class="dd-text"><span class="dd-label">Export</span><span class="dd-value" id="exportLabel">SVG · Pfade</span></span>
-      <span data-icon="chevron"></span>
-      <select id="exportMode" aria-label="Export-Art">
-        <option value="outlines">SVG · Pfade</option>
-        <option value="both">SVG · Pfade + Text</option>
-        <option value="text">SVG · nur Text</option>
-      </select>
-    </label>
+    <button type="button" class="btn btn-icon btn-secondary btn-medium" id="saveBtn" aria-label="In Bibliothek speichern" data-tip="In Bibliothek speichern" data-icon="save"></button>
     <button type="button" id="download" class="btn btn-icon btn-primary btn-medium" aria-label="SVG herunterladen" data-tip="SVG herunterladen" data-icon="download"></button>
   </div>
 </header>
@@ -337,13 +329,12 @@ dialog.modal::backdrop { background: #0000004d; }
           </div>
         </div>
       </div>
+      <div class="group" id="colors" role="group" aria-label="Farbe"></div>
       <span class="spacer"></span>
       <div class="group" role="group" aria-label="Änderungen">
         <button type="button" class="btn btn-icon btn-ghost btn-small" id="undo" aria-label="Rückgängig" data-tip="Rückgängig (⌘Z)" data-icon="undo"></button>
         <button type="button" class="btn btn-icon btn-ghost btn-small" id="redo" aria-label="Wiederholen" data-tip="Wiederholen (⇧⌘Z)" data-icon="redo"></button>
         <button type="button" class="btn btn-icon btn-ghost btn-small" id="reset" aria-label="Zurücksetzen" data-tip="Zurücksetzen (Hymne)" data-icon="reset"></button>
-        <span class="vsep"></span>
-        <button type="button" class="btn btn-icon btn-secondary btn-small" id="saveBtn" aria-label="In Bibliothek speichern" data-tip="In Bibliothek speichern" data-icon="save"></button>
       </div>
     </div>
     <div id="viewport"><div id="stage"><div id="art"></div></div></div>
@@ -356,9 +347,6 @@ dialog.modal::backdrop { background: #0000004d; }
         <button type="button" class="btn btn-ghost btn-small" id="zoom100">100 %</button>
       </div>
       <span class="spacer"></span>
-      <div class="group" id="colors" role="group" aria-label="Farbe"></div>
-      <span class="spacer"></span>
-      <span id="status"></span>
       <button type="button" class="btn btn-secondary btn-small rec" id="markMoment" data-tip="Moment für die Animation aufnehmen" data-icon="record">Moment <span id="momentBadge" class="count"></span></button>
     </div>
   </main>
