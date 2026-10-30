@@ -19,7 +19,11 @@ export const LAYOUT_DEFAULTS = {
   align: 'cut',              // 'cut' | 'ragged' | 'justify'
   minWeight: 145, maxWeight: 1000,
   reverse: false,            // false: dark/heavy where the gradient is high
+  lineHeight: 1,             // minimum row pitch × font size; rows then spread to fill the height
   field: {},                 // see field.js
+  plan: null,                // optional: rows from an earlier layout (model.plan) — same words on
+                             // the same rows at the same height; used by animations so words
+                             // slide within their row instead of jumping between rows
 };
 
 
@@ -38,42 +42,50 @@ export function layoutPattern(font, params) {
   const { top, bottom } = inkExtents(font, words, p);
   const inkTop = top * scale, inkBottom = -bottom * scale;
   const span = H - inkTop - inkBottom;
-  const rows = Math.max(1, Math.floor(span / s) + 1);
+  const plan = p.plan && p.plan.rows && p.plan.rows.length ? p.plan.rows : null;
+  const rows = plan ? plan.length : Math.max(1, Math.floor(span / (s * Math.max(0.5, p.lineHeight))) + 1);
   const pitch = rows > 1 ? span / (rows - 1) : 0;
 
   const lines = [];
   let wi = 0;
   for (let r = 0; r < rows; r++) {
-    const baseline = inkTop + r * pitch;
+    if (plan) wi = plan[r].start;
+    const baseline = plan ? plan[r].baseline : inkTop + r * pitch;
     const midY = baseline - s * 0.35;
     const lineWeight = p.unit === 'line' ? weightAt(W / 2, midY) : null;
     const runs = [];
     let x = 0;
+    const start = wi;
     for (let guard = 0; guard < 10000; guard++) {
+      if (plan && runs.length >= plan[r].count) break;
       const word = words[wi % words.length];
       if (runs.length) x += spaceAdvance(lastWeight(runs));
       const run = placeWord(word, x, midY, lineWeight);
       if (!runs.length) shiftRun(run, -inkLeft(run));          // ink touches the left edge
-      if (p.align !== 'cut' && runs.length && inkRight(run) > W) break;   // does not fit: next row
+      if (!plan && p.align !== 'cut' && runs.length && inkRight(run) > W) break;   // does not fit: next row
       runs.push(run);
       wi++;
       x = run.end;
-      if (inkRight(run) > W) break;                            // reached (or crossed) the right edge
+      if (!plan && inkRight(run) > W) break;                   // reached (or crossed) the right edge
     }
     if (p.align === 'justify') justify(runs, W);
-    lines.push({ baseline, runs });
+    lines.push({ baseline, runs, start, count: runs.length });
   }
 
   // Second pass: the first and last rows may lack accents or commas; move the
   // rows so their real ink touches the top and bottom edge.
-  if (lines.length) {
+  if (lines.length && !plan) {
     const first = lines[0], last = lines[lines.length - 1];
     const t = first.baseline - rowInk(first).top, b = rowInk(last).bottom - last.baseline;
     const b0 = t, b1 = H - b;
     lines.forEach((l, i) => { l.baseline = lines.length > 1 ? b0 + (i * (b1 - b0)) / (lines.length - 1) : b0; });
   }
   for (const l of lines) l.top = l.baseline - s * 0.5 - ((font.ascent + font.descent) / 2) * scale;   // line box, as Figma
-  return { ...empty, lines, rowPitch: lines.length > 1 ? lines[1].baseline - lines[0].baseline : 0 };
+  return {
+    ...empty, lines,
+    rowPitch: lines.length > 1 ? lines[1].baseline - lines[0].baseline : 0,
+    plan: { rows: lines.map((l) => ({ start: l.start, count: l.count, baseline: l.baseline })) },
+  };
 
   function rowInk(line) {
     let top = line.baseline, bottom = line.baseline;
@@ -90,10 +102,10 @@ export function layoutPattern(font, params) {
     const glyphs = [];
     let gx = x0;
     if (p.unit === 'letter') {
-      const base = font.run(word, weightAt(x0, midY));
+      const base = font.runFast(word, weightAt(x0, midY));
       for (let i = 0; i < base.length; i++) {
         const w = weightAt(gx + base[i].advance * scale / 2, midY);
-        const g = font.run(word, w)[i] || base[i];
+        const g = font.runFast(word, w)[i] || base[i];
         glyphs.push({ id: g.id, chars: g.chars, x: gx + g.xOffset * scale, dy: g.yOffset * scale, weight: w, adv: g.advance * scale });
         gx += g.advance * scale;
       }

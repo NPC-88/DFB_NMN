@@ -134,3 +134,36 @@ test('svg: live text keeps the weights; "both" hides the text layer', () => {
   const both = engine.svg(m, { mode: 'both' });
   assert.match(both, /id="Text_editierbar"[^>]*display="none"/);
 });
+
+test('animation: moments blend, loops close seamlessly, Fließen returns to the start', async () => {
+  const { fieldAt, animLength } = await import('../src/core/index.js');
+  const f = { ...base.field };
+  const anim = { moments: [{ field: f }, { field: { ...f, phase: 0.5, contrast: 0.4 } }], durations: [2, 3] };
+  assert.equal(animLength(anim), 5);
+  assert.ok(Math.abs(fieldAt(f, anim, 2).phase - 0.5) < 1e-9);
+  assert.deepEqual(fieldAt(f, anim, 0), fieldAt(f, anim, 5));
+  for (const mode of ['waves', 'ramp', 'parametric', 'points']) {
+    const ff = { ...f, mode };
+    const sample = (t) => { const g = createField(fieldAt(ff, { flow: true, length: 8 }, t), 400, 200); return [g(50, 50), g(300, 120)]; };
+    const [a0, b0] = sample(0), [a1, b1] = sample(8 - 1e-9);
+    assert.ok(Math.abs(a0 - a1) < 1e-4 && Math.abs(b0 - b1) < 1e-4, mode + ' flow is seamless');
+  }
+});
+
+test('animation: a row plan keeps the same words on the same rows while weights change', () => {
+  const first = engine.layout({ ...base, align: 'ragged' });
+  const later = engine.layout({ ...base, align: 'ragged', field: { ...base.field, phase: 0.37, angle: 30 }, plan: first.plan });
+  assert.equal(later.lines.length, first.lines.length);
+  later.lines.forEach((l, i) => {
+    assert.deepEqual(l.runs.map((r) => r.text), first.lines[i].runs.map((r) => r.text));
+    assert.equal(l.baseline, first.lines[i].baseline);
+  });
+  const ws = (m) => m.lines.flatMap((l) => l.runs.flatMap((r) => r.glyphs.map((g) => g.weight)));
+  assert.notDeepEqual(ws(later), ws(first));
+});
+
+test('layout: line spacing sets the minimum row pitch', () => {
+  const a = engine.layout({ ...base, lineHeight: 1 }), b = engine.layout({ ...base, lineHeight: 1.4 });
+  assert.ok(b.lines.length < a.lines.length);
+  assert.ok(b.rowPitch >= base.fontSize * 1.4 - 1e-6);
+});

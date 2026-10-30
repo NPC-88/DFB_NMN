@@ -77,6 +77,8 @@ body { font: var(--fs-body)/1.4 var(--font-ui); color: var(--fg); background: va
   content: ""; position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-bottom-color: var(--fg); border-top: 0; z-index: 20; }
 
 #download[data-tip]::after, .topbar .group:last-child [data-tip]:hover::after { left: auto; right: 0; transform: none; }
+.previewbar [data-tip]:hover::after, .previewbar [data-tip]:focus-visible::after { top: auto; bottom: calc(100% + 8px); }
+.previewbar [data-tip]:hover::before, .previewbar [data-tip]:focus-visible::before { top: auto; bottom: calc(100% + 3px); border-bottom: 0; border-top: 5px solid var(--fg); }
 /* --- Top bar + Tab Bar (static) --- */
 .topbar { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; background: var(--bg); border-radius: var(--r-card); padding: 0 var(--s4); min-height: 64px; position: relative; z-index: 5; }
 
@@ -86,10 +88,11 @@ body { font: var(--fs-body)/1.4 var(--font-ui); color: var(--fg); background: va
 .tab[aria-selected=true] { color: var(--highlight); }
 .tab[aria-selected=true]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: var(--highlight); }
 .tab:hover { color: var(--highlight); }
-#libCount:not(:empty) { font: 650 11px/1 var(--font-ui); background: var(--bg-tertiary); color: var(--fg-2); border-radius: var(--r-pill); padding: 3px 7px; }
+#libCount:empty, #animCount:empty { display: none; }
+.count { font: 650 11px/1 var(--font-ui); background: var(--bg-tertiary); color: var(--fg-2); border-radius: var(--r-pill); padding: 3px 7px; }
 .group { display: flex; gap: var(--s2); align-items: center; position: relative; flex-wrap: wrap; }
 .vsep { width: 1px; height: 28px; background: var(--bg-tertiary); }
-body[data-tab=library] .tool-only { display: none !important; }
+body:not([data-tab=tool]) .tool-only, body[data-tab=library] .work-only { display: none !important; }
 
 /* colour pairs */
 .pair { width: 40px; height: 32px; border: 0; border-radius: var(--r-pill); cursor: pointer; display: grid; place-items: center; font: italic 900 13px var(--font-ui); box-shadow: inset 0 0 0 1px #0000001a; }
@@ -155,7 +158,29 @@ input[type=range]:active::-webkit-slider-thumb { background: var(--highlight-pre
 .switch input:checked + .switch-track::after { left: 17px; background: #fff; }
 
 /* --- Work area --- */
-#tool { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--s3); }
+#tool, #animation { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--s3); }
+.corner-tools { position: absolute; top: calc(var(--s3) + var(--s2)); right: calc(var(--s3) + var(--s2)); z-index: 3; display: flex; gap: 2px; background: var(--bg); border-radius: var(--r-pill); padding: 2px; box-shadow: 0 1px 4px #0000001f; }
+.corner-tools .btn[data-tip]:hover::after { left: auto; right: 0; transform: none; }
+.moment-row { display: flex; align-items: center; gap: var(--s3); }
+
+/* --- Animation tab --- */
+.anim-main { position: relative; min-width: 0; min-height: 0; background: var(--bg); border-radius: var(--r-card); display: flex; flex-direction: column; }
+.anim-viewport { flex: 1; min-height: 0; display: grid; place-items: center; background: var(--bg-page); margin: var(--s3) var(--s3) 0; border-radius: var(--r-card); overflow: hidden; }
+.anim-canvas { display: block; box-shadow: 0 1px 6px #0000002e; }
+.scrub { flex: 1; min-width: 120px; }
+.time { font: 650 var(--fs-body)/1 var(--font-ui); font-variant-numeric: tabular-nums; color: var(--fg-2); min-width: 92px; }
+#animStatus { color: var(--fg-2); font-size: var(--fs-small); }
+.anim-aside { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--s3); }
+.moments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s3); }
+.moment { display: grid; grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto auto; gap: var(--s2) var(--s3); padding-bottom: var(--s3); border-bottom: 1px solid var(--bg-tertiary); }
+.moment-thumb { width: 96px; border-radius: var(--s1); box-shadow: inset 0 0 0 1px #0000001a; grid-row: span 2; align-self: start; }
+.moment-body { display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+.moment-actions { display: flex; gap: 2px; grid-column: 2; }
+.progress { display: flex; flex-direction: column; gap: var(--s1); }
+.progress-track { height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden; }
+.progress-bar { height: 100%; width: 0; background: var(--highlight); transition: width .1s; }
+.progress-label { font-size: var(--fs-small); color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.progress .btn { align-self: flex-start; }
 main { position: relative; min-width: 0; min-height: 0; background: var(--bg); border-radius: var(--r-card); display: flex; flex-direction: column; }
 #viewport { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; padding: var(--s6); background: var(--bg-page); margin: var(--s3) var(--s3) 0; border-radius: var(--r-card); }
 #stage { position: relative; flex: none; box-shadow: 0 1px 6px #0000002e; }
@@ -242,12 +267,15 @@ dialog.modal::backdrop { background: #0000004d; }
 
 @media (max-width: 860px) {
   html, body { height: auto; }
-  #tool { grid-template-columns: minmax(0, 1fr); }
+  #tool, #animation { grid-template-columns: minmax(0, 1fr); }
+  .anim-main { height: 55vh; }
   main { height: 55vh; }
   .menu { right: auto; left: 0; }
   .topbar { padding-block: var(--s2); }
   .topbar .spacer { display: none; }
-  .tabbar { min-height: 48px; }
+  .tabbar { min-height: 48px; max-width: 100%; }
+  .tab { padding: 0 var(--s2); font-size: var(--fs-body); }
+  .tab > .icon { display: none; }
   .dropdown { min-width: 0; }
   .previewbar .fs { grid-template-columns: minmax(120px, 1fr) 76px; flex: 1 1 100%; }
 }
@@ -258,12 +286,13 @@ dialog.modal::backdrop { background: #0000004d; }
   <h1>DFB Typo-Pattern</h1>
   <nav class="tabbar" role="tablist" aria-label="Bereiche">
     <button type="button" class="tab" role="tab" data-tab="tool" aria-selected="true" data-icon="tool">Werkzeug</button>
-    <button type="button" class="tab" role="tab" data-tab="library" aria-selected="false" data-icon="library">Bibliothek <span id="libCount"></span></button>
+    <button type="button" class="tab" role="tab" data-tab="animation" aria-selected="false" data-icon="video">Animation <span id="animCount" class="count"></span></button>
+    <button type="button" class="tab" role="tab" data-tab="library" aria-selected="false" data-icon="library">Bibliothek <span id="libCount" class="count"></span></button>
   </nav>
   <span class="spacer"></span>
-  <div class="group tool-only" id="colors" role="group" aria-label="Farbe"></div>
-  <span class="vsep tool-only"></span>
-  <div class="group tool-only">
+  <div class="group work-only" id="colors" role="group" aria-label="Farbe"></div>
+  <span class="vsep work-only"></span>
+  <div class="group work-only">
     <button type="button" class="dropdown" id="formatBtn" data-popover="formatPop" aria-expanded="false" aria-haspopup="true">
       <span class="dd-text"><span class="dd-label">Format</span><span class="dd-value">1920 × 1080</span></span>
       <span data-icon="chevron"></span>
@@ -279,10 +308,10 @@ dialog.modal::backdrop { background: #0000004d; }
       </div>
     </div>
   </div>
-  <span class="vsep tool-only"></span>
-  <div class="group tool-only">
-    <button type="button" class="btn btn-secondary btn-medium" id="saveBtn" data-icon="save">Speichern</button>
-    <label class="dropdown">
+  <span class="vsep work-only"></span>
+  <div class="group work-only">
+    <button type="button" class="btn btn-icon btn-secondary btn-medium" id="saveBtn" aria-label="In Bibliothek speichern" data-tip="In Bibliothek speichern" data-icon="save"></button>
+    <label class="dropdown tool-only">
       <span class="dd-text"><span class="dd-label">Export</span><span class="dd-value" id="exportLabel">SVG · Pfade</span></span>
       <span data-icon="chevron"></span>
       <select id="exportMode" aria-label="Export-Art">
@@ -291,18 +320,19 @@ dialog.modal::backdrop { background: #0000004d; }
         <option value="text">SVG · nur Text</option>
       </select>
     </label>
-    <button type="button" id="download" class="btn btn-primary btn-medium" data-icon="download">Herunterladen</button>
+    <button type="button" id="download" class="btn btn-icon btn-primary btn-medium tool-only" aria-label="SVG herunterladen" data-tip="SVG herunterladen" data-icon="download"></button>
   </div>
 </header>
 
 <div id="tool">
   <main>
-    <div id="viewport"><div id="stage"><div id="art"></div></div></div>
-    <div class="previewbar">
+    <div class="corner-tools" role="group" aria-label="Verlauf der Änderungen">
       <button type="button" class="btn btn-icon btn-ghost btn-small" id="undo" aria-label="Rückgängig" data-tip="Rückgängig (⌘Z)" data-icon="undo"></button>
       <button type="button" class="btn btn-icon btn-ghost btn-small" id="redo" aria-label="Wiederholen" data-tip="Wiederholen (⇧⌘Z)" data-icon="redo"></button>
       <button type="button" class="btn btn-icon btn-ghost btn-small" id="reset" aria-label="Zurücksetzen" data-tip="Zurücksetzen (Hymne)" data-icon="reset"></button>
-      <span class="vsep"></span>
+    </div>
+    <div id="viewport"><div id="stage"><div id="art"></div></div></div>
+    <div class="previewbar">
       <div class="fs">
         <div class="slider"><div class="slider-head"><label for="fontSize">Schriftgröße</label></div><input type="range" id="fontSize" min="8" max="300" step="0.5"></div>
         <input type="number" class="input" id="fontSizeNum" min="4" max="400" step="0.5" aria-label="Schriftgröße in px">
@@ -319,6 +349,7 @@ dialog.modal::backdrop { background: #0000004d; }
   <aside id="controls"></aside>
 </div>
 
+<div id="animation" class="work" hidden></div>
 <section id="library" hidden></section>
 
 <dialog class="modal" id="saveDialog">

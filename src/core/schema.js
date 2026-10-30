@@ -6,6 +6,13 @@
 const mode = (...m) => (p) => m.includes(p.field.mode);
 
 export const SCHEMA = [
+  { group: 'Text', id: 'text', open: false, controls: [
+    { key: 'text', type: 'textarea', label: 'Text' },
+  ] },
+  { group: 'Typografie', id: 'type', open: true, controls: [
+    { key: 'align', type: 'segmented', label: 'Zeilenende', options: [['cut', 'Angeschnitten'], ['ragged', 'Flattersatz'], ['justify', 'Bündig']] },
+    { key: 'lineHeight', type: 'range', label: 'Zeilenabstand', min: 1, max: 1.6, step: 0.01, unit: '×' },
+  ] },
   { group: 'Verlauf', id: 'gradient', open: true, controls: [
     { key: 'field.bands', type: 'range', label: 'Anzahl Wellen', min: 0.25, max: 12, step: 0.05, when: mode('waves') },
     { key: 'field.angle', type: 'range', label: 'Richtung', min: 0, max: 360, step: 1, unit: '°', when: mode('waves', 'ramp') },
@@ -16,18 +23,13 @@ export const SCHEMA = [
     { key: 'field.bend', type: 'range', label: 'Wellenstärke', min: 0, max: 0.5, step: 0.005, when: (p) => p.field.mode === 'parametric' && p.field.waves > 0 },
     { key: 'field.size', type: 'range', label: 'Größe', min: 0, max: 1, step: 0.005, when: mode('points') },
     { key: 'field.contrast', type: 'range', label: 'Kontrast', min: 0, max: 1, step: 0.005 },
-    { key: 'field.offset', type: 'range', label: 'Leichter ↔ schwerer', min: 0, max: 1, step: 0.005 },
-  ] },
-  { group: 'Gewicht', id: 'weight', open: true, controls: [
-    { key: 'unit', type: 'segmented', label: 'Je', options: [['line', 'Zeile'], ['word', 'Wort'], ['letter', 'Buchstabe']] },
-    { key: 'align', type: 'segmented', label: 'Zeilenende', options: [['cut', 'Angeschnitten'], ['ragged', 'Flattersatz'], ['justify', 'Bündig']] },
-    { key: 'minWeight', type: 'range', label: 'Leichtestes', min: 75, max: 1000, step: 1 },
-    { key: 'maxWeight', type: 'range', label: 'Schwerstes', min: 75, max: 1000, step: 1 },
-  ] },
-  { group: 'Text', id: 'text', open: false, controls: [
-    { key: 'text', type: 'textarea', label: 'Text' },
   ] },
 ];
+
+// Fixed for every pattern (team decision): weight per letter, 160 → 1000,
+// neutral lighter/heavier. Applied on load so older saved patterns match.
+export const FIXED = { unit: 'letter', minWeight: 160, maxWeight: 1000 };
+export const FIXED_FIELD = { offset: 0.5 };
 
 export const FIELD_MODES = [['waves', 'Wellen'], ['ramp', 'Verlauf'], ['parametric', 'Parametrisch'], ['points', 'Punkte']];
 

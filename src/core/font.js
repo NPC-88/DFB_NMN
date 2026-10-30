@@ -67,6 +67,16 @@ export function createVarFont(fkFont, { features = ['kern'] } = {}) {
     return r;
   }
 
+  // Fast variant for letter-by-letter weights: glyph ids and kerning come from
+  // a shaping at the nearest 40-unit weight step (kerning differs by a few font
+  // units across the axis), advances are exact for the weight asked.
+  function runFast(text, wght) {
+    const w = clampW(wght);
+    const base = run(text, Math.round(w / 40) * 40);
+    const bw = clampW(Math.round(w / 40) * 40);
+    return base.map((g) => ({ ...g, advance: g.advance - advance(g.id, bw) + advance(g.id, w) }));
+  }
+
   // Glyph outline commands in font units (y up), at a weight.
   function outline(gid, wght) {
     const w = clampW(wght);
@@ -108,6 +118,7 @@ export function createVarFont(fkFont, { features = ['kern'] } = {}) {
     namedInstances: namedInstances(fkFont),
     clampWeight: clampW,
     run,
+    runFast,
     outline,
     advance,
   };

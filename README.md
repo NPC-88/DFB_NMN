@@ -21,22 +21,26 @@ npm test
 ### What the tool does
 
 - Repeats the text in capitals until the format is full. The ink starts in the top-left corner;
-  rows are spread so nothing is ever cut at the top or bottom. Line height 1 (minimum), tracking 0.
-- **Zeilenende:** *Angeschnitten* (default, rows run past the right edge and are cut there),
-  *Flattersatz* (left-aligned, ragged), *Bündig* (justified with word spacing).
-- **Verlauf** (gradient), always visible with its handles:
-  *Wellen* (repeating bands) and *Verlauf* (one gradient) from the first version; *Parametrisch*
-  (linear or radial between two handles, plus HUK's sine "Wellen"); *Punkte* (drag the dot to move,
-  the blue handle to resize, × to delete, click empty space to add).
-  A Figma-style **stop bar** shapes the gradient in every mode (click the bar to add a stop, drag
-  to move, select to set its value or delete; ⇄ flips, ⟳ turns 90°). Dark = heavy.
-- **Gewicht je** Zeile / Wort / Buchstabe, lightest/heaviest weight.
-- Top bar: tabs *Werkzeug / Bibliothek*, colour (Hellgold auf Gold, Schwarz auf Graphit), format
-  menu (presets + custom size), undo/redo (⌘Z / ⇧⌘Z), *Speichern*, SVG export.
-  Font size and zoom sit under the preview.
-- **Bibliothek** tab: saved patterns as previews; open, copy link, rename, delete.
+  rows are spread so nothing is ever cut at the top or bottom. Weight changes **per letter**,
+  from 160 to 1000 (fixed for everyone).
+- **Text** (closed by default; the Hymne is preset).
+- **Typografie:** *Zeilenende* (Angeschnitten (default) / Flattersatz / Bündig) and
+  *Zeilenabstand* (minimum line spacing, 1.0–1.6).
+- **Verlauf**, always visible with its handles: *Wellen*, *Verlauf*, *Parametrisch* (linear or
+  radial between two handles), *Punkte* (move, resize, delete, add). A Figma-style **stop bar**
+  shapes the gradient in every mode; flip and 90° turn; *Kontrast*. Dark = heavy.
+- **Moment merken** stores the current gradient as a keyframe for the Animation tab.
+- Top bar: tabs *Werkzeug / Animation / Bibliothek*, colour (Hellgold auf Gold, Schwarz auf
+  Graphit), format menu, save (to the library), SVG export type, download. Undo / redo / reset sit
+  in the top-right corner of the preview; font size and zoom under it.
+- **Animation** tab: only the gradient moves; the words stay on their rows (the row plan of the
+  first moment is kept). Moments: reorder, time to the next moment, open in the tool, delete.
+  *Fließen* adds an endless drift (seamless loop). Smooth or linear transitions; loop or back
+  and forth. Live preview. Export **MP4** (H.264, Chrome / Edge / Safari) or **GIF**, 100 % or 50 %,
+  25 / 30 fps (GIF 25), with progress and cancel.
+- **Bibliothek** tab: saved patterns (with their moments) as previews; open, copy link, rename, delete.
 - **Export:** SVG in the pattern colour only, no background: outlined paths (exact weights),
-  paths + hidden live text, or live text only.
+  paths + hidden live text, or live text only. Videos include the background colour.
 
 ### Team library (Firebase, free)
 
@@ -71,6 +75,7 @@ internal tool; the free plan allows 50,000 reads and 20,000 writes per day.
 
 ```
 src/core/          pattern engine — no DOM; runs in browser, Figma UI and Node
+  animate.js       moments → gradient at time t, Fließen
   field.js         wave field generator (0..1 at every point)
   font.js          variable-font adapter (fontkit): advances, kerning, outlines at any wght
   layout.js        repeats text in rows, assigns a weight per line/word/letter → plain model
@@ -78,7 +83,8 @@ src/core/          pattern engine — no DOM; runs in browser, Figma UI and Node
   presets.js       palette, formats, Hymne preset (values from the supplied material)
   schema.js        every control: type, range, label — UIs render from this
   index.js         createEngine(fontBytes) → { layout, svg, fieldGrid, font }
-src/ui/            UI in the DFB toolkit style (Figma node 26:43): app shell, controls from the schema, gradient editor,
+src/ui/            UI in the DFB toolkit style (Figma node 26:43): app shell, animation tab +
+                   video export (animation.js, render.js, video.js), controls from the schema, gradient editor,
                    library tab, store.js (browser or Firestore)
 src/config.js      team library connection (Firebase project id + api key)
 src/hosts/         web.js (font loading, saving) · figma-ui.js (parked)

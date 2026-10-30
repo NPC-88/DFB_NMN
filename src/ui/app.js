@@ -3,11 +3,12 @@
 // gradient editor, and the library tab. Host-specific things (saving files)
 // come from `host`; the library backend from `store`.
 
-import { createEngine, SCHEMA, COLOR_PAIRS, FORMATS, PRESETS, setPath } from '../core/index.js';
+import { createEngine, SCHEMA, COLOR_PAIRS, FORMATS, PRESETS, FIXED, FIXED_FIELD, ANIM_DEFAULTS, setPath } from '../core/index.js';
 import { renderControls, el } from './controls.js';
 import { createGradientEditor } from './gradient.js';
 import { createLibraryView, encodeShare, decodeShare } from './library.js';
 import { icon, hydrateIcons } from './icons.js';
+import { createAnimationView } from './animation.js';
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const ZOOMS = [0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8];
@@ -18,6 +19,7 @@ export function startApp({ fontBytes, host, store }) {
   const preset = PRESETS[0];
   let params = clone(preset.params);
   let pairId = preset.colorPair;
+  let anim = clone(ANIM_DEFAULTS);
   let zoom = 'fit';
   let model = null;
 
@@ -69,9 +71,11 @@ export function startApp({ fontBytes, host, store }) {
     tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === id)));
     $('#tool').hidden = id !== 'tool';
     $('#library').hidden = id !== 'library';
+    $('#animation').hidden = id !== 'animation';
     document.body.dataset.tab = id;
     if (id === 'library') library.refresh();
-    else layoutStage();
+    if (id === 'animation') animView.show(); else animView.hide();
+    if (id === 'tool') layoutStage();
   }
 
   // --- colour (two swatches) -------------------------------------------------
@@ -128,6 +132,31 @@ export function startApp({ fontBytes, host, store }) {
   const gradBody = controls.bodies.gradient;
   const editorRoot = el('div', { class: 'grad-editor' });
   gradBody.prepend(editorRoot);
+  // "Moment merken": the current gradient becomes a keyframe for the Animation tab.
+  const momentRow = el('div', { class: 'moment-row' });
+  const momentBtn = el('button', { type: 'button', class: 'btn btn-secondary btn-small', id: 'markMoment' });
+  momentBtn.append(icon('moment', 18), document.createTextNode('Moment merken'));
+  const momentCount = el('span', { class: 'hint', id: 'momentCount' });
+  momentRow.append(momentBtn, momentCount);
+  gradBody.prepend(momentRow);
+  momentBtn.addEventListener('click', () => {
+    const n = anim.moments.length;
+    setAnim({ moments: [...anim.moments, { field: clone(params.field) }], durations: [...anim.durations.slice(0, n), 2] });
+    flash(`Gemerkt: Moment ${n + 1}` + (n + 1 < 2 ? ' — noch einen Moment merken, dann bewegt es sich (Tab „Animation“).' : ' — zu sehen im Tab „Animation“.'), 'success');
+  });
+  function setAnim(patch, opts = {}) {
+    anim = { ...anim, ...patch };
+    if (opts.transient) { animView.light(); return; }
+    commit();
+    animView.sync();
+    syncMoments();
+  }
+  function syncMoments() {
+    const n = anim.moments.length;
+    momentCount.textContent = n ? `${n} ${n === 1 ? 'Moment' : 'Momente'} gemerkt` : '';
+    $('#animCount').textContent = n ? String(n) : '';
+  }
+
   const editor = createGradientEditor(editorRoot, {
     params: () => params,
     setField,
@@ -146,7 +175,7 @@ export function startApp({ fontBytes, host, store }) {
   fsNum.addEventListener('change', () => { const v = Math.min(400, Math.max(4, +fsNum.value)); if (v) set('fontSize', v); });
 
   // --- reset, export ---------------------------------------------------------
-  $('#reset').addEventListener('click', () => { params = clone(preset.params); pairId = preset.colorPair; zoom = 'fit'; window.history.replaceState(null, '', location.pathname); update(); });
+  $('#reset').addEventListener('click', () => { params = clone(preset.params); pairId = preset.colorPair; anim = clone(ANIM_DEFAULTS); zoom = 'fit'; window.history.replaceState(null, '', location.pathname); update(); });
   $('#exportMode').addEventListener('change', (e) => { $('#exportLabel').textContent = e.target.selectedOptions[0].textContent; });
   $('#download').addEventListener('click', async () => {
     if (!model) render();
@@ -184,18 +213,36 @@ export function startApp({ fontBytes, host, store }) {
     } finally { btn.disabled = false; }
   });
 
+  // --- animation tab -----------------------------------------------------------
+  const animView = createAnimationView($('#animation'), {
+    engine,
+    params: () => params,
+    pair,
+    anim: () => anim,
+    setAnim,
+    openMoment: (i) => { params = { ...params, field: clone(anim.moments[i].field) }; showTab('tool'); update(); flash(`Moment ${i + 1} im Werkzeug geöffnet.`); },
+    flash,
+    save: (file) => host.save(file),
+  });
+
   // --- state -----------------------------------------------------------------
+  // Weight per letter 160 → 1000 and neutral lighter/heavier are fixed for
+  // everyone, also for patterns saved before that decision.
   function apply(s) {
     if (s.params) params = { ...clone(preset.params), ...s.params, field: { ...preset.params.field, ...(s.params.field || {}) } };
+    params = { ...params, ...FIXED, field: { ...params.field, ...FIXED_FIELD } };
     if (s.colorPair && COLOR_PAIRS.some((c) => c.id === s.colorPair)) pairId = s.colorPair;
+    anim = { ...clone(ANIM_DEFAULTS), ...(s.anim ? clone(s.anim) : {}) };
   }
-  function snapshot() { return { v: 2, params: clone(params), colorPair: pairId }; }
+  function snapshot() { return { v: 3, params: clone(params), colorPair: pairId, anim: clone(anim) }; }
 
   let queued = false;
   function update(record = true) {
     if (record) commit();
     controls.sync();
     editor.sync();
+    syncMoments();
+    if (document.body.dataset.tab === 'animation') animView.sync();
     pairBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === pairId)));
     const f = FORMATS.find((x) => x.width === params.width && x.height === params.height);
     $('#formatBtn .dd-value').textContent = f ? f.name : `${params.width} × ${params.height}`;

@@ -22,8 +22,14 @@ import error from '../../assets/icons/attention.svg';
 import info from '../../assets/icons/information.svg';
 import flip from '../../assets/icons/flip.svg';
 import rotate from '../../assets/icons/rotate.svg';
+import play from '../../assets/icons/play.svg';
+import pause from '../../assets/icons/pause.svg';
+import up from '../../assets/icons/arrow-up.svg';
+import down from '../../assets/icons/arrow-down.svg';
+import moment from '../../assets/icons/bookmark.svg';
+import video from '../../assets/icons/play.svg';
 
-const ICONS = { add, remove, close, chevron, download, edit, trash, share, reset, undo, redo: undo, fit, zoomIn, zoomOut, save, library, tool, success, error, info, flip, rotate };
+const ICONS = { add, remove, close, chevron, download, edit, trash, share, reset, undo, redo: undo, fit, zoomIn, zoomOut, save, library, tool, success, error, info, flip, rotate, play, pause, up, down, moment, video };
 
 // <span class="icon">…svg…</span>; redo is undo mirrored.
 export function icon(name, size = 20) {

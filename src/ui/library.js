@@ -40,7 +40,9 @@ export function createLibraryView(root, { store, onOpen, flash, onCount }) {
     else open.append(el('span', {}, it.name));
     open.addEventListener('click', () => onOpen(it));
     const name = el('div', { class: 'lib-name' }, it.name);
-    const meta = el('div', { class: 'lib-meta' }, [it.author, it.created ? new Date(it.created).toLocaleDateString('de-DE') : ''].filter(Boolean).join(' · '));
+    const an = it.settings && it.settings.anim;
+    const animated = an && ((an.moments && an.moments.length >= 2) || an.flow);
+    const meta = el('div', { class: 'lib-meta' }, [it.author, it.created ? new Date(it.created).toLocaleDateString('de-DE') : '', animated ? 'Animation' : ''].filter(Boolean).join(' · '));
     const actions = el('div', { class: 'lib-actions' });
     const link = iconButton('share', 'Link kopieren');
     const ren = iconButton('edit', 'Umbenennen');

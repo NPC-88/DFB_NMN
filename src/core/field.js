@@ -22,6 +22,7 @@ export const FIELD_DEFAULTS = {
   phase: 0,           // shifts the waves, 0..1 = one wave
   wobble: 0.08,       // bend amount
   wobbleFreq: 1,      // bends across the frame
+  wobblePhase: 0,     // shifts the bends, 0..1 (animated by "Fließen")
   // parametric
   type: 'linear',     // 'linear' | 'radial'
   a: { x: 0.15, y: 0.2 },   // start (linear) / centre (radial), 0..1 of the frame
@@ -101,7 +102,7 @@ function positionFn(p, width, height) {
     const dx = x - cx, dy = y - cy;
     let d = (dx * ux + dy * uy) / extU;                  // −0.5..0.5
     const across = (dx * vx + dy * vy) / extV;
-    if (p.wobble) d += p.wobble * Math.sin(TAU * p.wobbleFreq * (across + 0.5));
+    if (p.wobble) d += p.wobble * Math.sin(TAU * (p.wobbleFreq * (across + 0.5) + p.wobblePhase));
     if (p.mode === 'ramp') return d + 0.5;
     return 0.5 - 0.5 * Math.cos(TAU * (d * p.bands + p.phase));
   };

@@ -107,6 +107,36 @@ const path = require('path'); const fs = require('fs'); const http = require('ht
   const out = 'test/out/' + dl.suggestedFilename(); await dl.saveAs(out);
   log('download:', path.basename(out), fs.statSync(out).size, 'bytes');
 
+  // animation: two moments, play, export GIF + MP4
+  await pg.click('#reset');
+  await pg.click('#markMoment');
+  await pg.locator('#ctl-field-phase').fill('0.5'); await pg.locator('#ctl-field-phase').dispatchEvent('change');
+  await pg.locator('#ctl-field-angle').fill('40'); await pg.locator('#ctl-field-angle').dispatchEvent('change');
+  await pg.click('#markMoment');
+  log('moments:', await pg.textContent('#momentCount'), '| tab badge:', await pg.textContent('#animCount'));
+  await pg.screenshot({ path: 'test/out/v4-tool.png' });
+  await pg.click('[role=tab][data-tab=animation]');
+  await pg.waitForTimeout(300);
+  await pg.click('.anim-main .btn-primary');           // play
+  await pg.waitForTimeout(1500);
+  log('playing:', await pg.textContent('.time'), '|', await pg.textContent('#animStatus'));
+  await pg.screenshot({ path: 'test/out/v4-anim.png' });
+  await pg.click('.anim-main .btn-primary');           // pause
+  log('mp4 encoder:', await pg.evaluate(async () => {
+    if (!window.VideoEncoder) return 'none';
+    const r = await VideoEncoder.isConfigSupported({ codec: 'avc1.640028', width: 960, height: 540, bitrate: 4e6, framerate: 25 });
+    return r.supported ? 'h264 ok' : 'h264 not supported';
+  }));
+  for (const [format, sz] of [['gif', '0.5'], ['mp4', '0.5']]) {
+    await pg.click(`.anim-aside .chip[data-value=${format}]`);
+    await pg.click(`.anim-aside .chip[data-value="${sz}"]`);
+    const t = Date.now();
+    const [dl] = await Promise.all([pg.waitForEvent('download', { timeout: 120000 }).catch(() => null), pg.click('#videoExport')]);
+    if (!dl) { log(format, 'no download:', await pg.textContent('#toast')); continue; }
+    const out = 'test/out/' + dl.suggestedFilename(); await dl.saveAs(out);
+    log(format, path.basename(out), Math.round(fs.statSync(out).size / 1024) + ' KB', ((Date.now() - t) / 1000).toFixed(1) + ' s');
+  }
+
   const ph = await b.newPage({ viewport: { width: 400, height: 800 } });
   ph.on('pageerror', (e) => errors.push(e.message));
   await ph.goto('http://localhost:8765/'); await ph.waitForSelector('#art svg path');
