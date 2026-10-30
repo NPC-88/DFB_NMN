@@ -34,7 +34,11 @@ async function bundle(entry, embed = true) {
   return r.outputFiles[0].text;
 }
 
-const shell = readFileSync(join(root, 'src/ui/shell.html'), 'utf8');
+// UI font: DFB Sans Pro (variable, upright + italic) embedded as data URIs.
+const uiFont = (file, style) => `@font-face { font-family: "DFB Sans Pro"; font-style: ${style}; font-weight: 75 1000; font-stretch: 40% 200%; font-display: block;
+  src: url(data:font/woff2;base64,${readFileSync(join(root, 'assets/fonts', file)).toString('base64')}) format("woff2"); }`;
+const shell = readFileSync(join(root, 'src/ui/shell.html'), 'utf8')
+  .replace('/*__UIFONTS__*/', () => uiFont('DFB-Sans-Pro.woff2', 'normal') + '\n' + uiFont('DFB-Sans-Pro-Italic.woff2', 'italic'));
 const page = (js) => shell.replace('<script>/*__APP__*/</script>', () => `<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`);
 
 // claude.ai artifact: the host wraps the page in its own <html>/<head>/<body>,

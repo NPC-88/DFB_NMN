@@ -90,6 +90,7 @@ src/config.js      team library connection (Firebase project id + api key)
 src/hosts/         web.js (font loading, saving) · figma-ui.js (parked)
 docs/              GitHub Pages build
 assets/icons/      DFB icons (from DFB_Icons.zip) + flip/rotate drawn to match
+assets/fonts/      DFB Sans Pro variable web fonts (UI)
 figma/             manifest.json, code.js (canvas side); ui.html is built
 scripts/           build.mjs (esbuild, inlines everything), fonts.mjs (unpacks the font)
 test/              node:test suites (engine, Figma plugin against a mock API) + render helpers
@@ -137,5 +138,5 @@ const svg = engine.svg(model, { color: '#A60014', mode: 'outlines' });
 Built from the DFB UI toolkit (Figma "UI tool kit selection"): Tab Bar, Buttons (primary,
 secondary, ghost, icon), Chips, Range Slider, Dropdown, Input Field, Text Area, Modal, Toast,
 Card, Tooltip; colours, radii and shadows from its variables (light only). Icons from the DFB
-icon set. The UI font is DFB Sans Pro / DFB Sans Web: until those files are added, the page uses
-the system font (add `@font-face` rules in `src/ui/shell.html` when they arrive).
+icon set. UI font: DFB Sans Pro (variable, upright + italic, `assets/fonts/`), embedded into the
+pages by the build.
