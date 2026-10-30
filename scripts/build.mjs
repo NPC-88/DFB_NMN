@@ -51,5 +51,4 @@ writeFileSync(join(root, 'dist/index.html'), web);
 writeFileSync(join(root, 'dist/artifact.html'), artifactPage(web));
 writeFileSync(join(root, 'docs/index.html'), web);
 writeFileSync(join(root, 'docs/.nojekyll'), '');
-if (!existsSync(join(root, 'docs/library.json'))) writeFileSync(join(root, 'docs/library.json'), JSON.stringify({ format: 'dfb-pattern-library', version: 1, items: [] }, null, 2) + '\n');
 console.log('built docs/index.html, dist/index.html, dist/artifact.html');

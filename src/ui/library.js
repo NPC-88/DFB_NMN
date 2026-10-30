@@ -1,120 +1,96 @@
-// Wave library: save settings you like, reload them, share them.
-//   - "Meine": saved in this browser (localStorage)
-//   - "Team":  library.json next to the page (curated in the repository, the
-//              same for everyone who opens the GitHub link)
-//   - share links carry the settings in the URL (#p=…); export/import as JSON
-//     moves a whole library between people.
+// Library tab: everything the team saved, as a grid of previews.
+// Open loads a pattern into the tool; Link copies a link that opens exactly
+// that pattern; rename and delete work on the shared library for everyone.
 
-import { panel, el } from './controls.js';
+import { el } from './controls.js';
 
-const KEY = 'dfb-pattern-library-v1';
+export function createLibraryView(root, { store, onOpen, flash, onCount }) {
+  const head = el('div', { class: 'lib-head' });
+  const title = el('h2', {}, 'Bibliothek');
+  const where = el('span', { class: 'hint' }, store.shared ? 'Für das ganze Team' : 'Nur in diesem Browser — die Team-Bibliothek ist noch nicht verbunden');
+  const search = el('input', { type: 'search', id: 'lib-search', placeholder: 'Suchen', 'aria-label': 'Bibliothek durchsuchen' });
+  const reload = el('button', { type: 'button' }, 'Aktualisieren');
+  head.append(title, where, el('span', { class: 'spacer' }), search, reload);
+  const grid = el('div', { class: 'lib-grid' });
+  const empty = el('p', { class: 'lib-empty' }, 'Noch keine Muster. Im Werkzeug auf „Speichern“ klicken, um das aktuelle Muster hier abzulegen.');
+  root.append(head, grid, empty);
 
-export function createLibrary({ host, onLoad, current, flash }) {
-  const box = panel('Bibliothek', true);
-  const form = el('div', { class: 'lib-save' });
-  const name = el('input', { type: 'text', id: 'lib-name', placeholder: 'Name, z. B. Hymne weich', 'aria-label': 'Name' });
-  const save = el('button', { type: 'button', class: 'primary' }, 'Speichern');
-  form.append(name, save);
-  const mineHead = el('h3', {}, 'Meine');
-  const mine = el('ul', { class: 'lib-list' });
-  const teamHead = el('h3', {}, 'Team');
-  const team = el('ul', { class: 'lib-list' });
-  const tools = el('div', { class: 'lib-tools' });
-  const share = el('button', { type: 'button' }, 'Link kopieren');
-  const exp = el('button', { type: 'button' }, 'Exportieren');
-  const impLabel = el('label', { class: 'button' }, 'Importieren');
-  const imp = el('input', { type: 'file', accept: '.json,application/json', hidden: '' });
-  impLabel.append(imp);
-  tools.append(share, exp, impLabel);
-  box.body.append(form, mineHead, mine, teamHead, team, tools);
+  let items = [];
+  search.addEventListener('input', draw);
+  reload.addEventListener('click', () => refresh());
 
-  let items = read();
-  let teamItems = [];
-
-  save.addEventListener('click', () => {
-    const n = name.value.trim() || 'Muster ' + (items.length + 1);
-    items = [{ id: Date.now().toString(36), name: n, created: new Date().toISOString(), settings: current() }, ...items];
-    write(items);
-    name.value = '';
+  async function refresh() {
+    try { items = await store.list(); }
+    catch (e) { flash('Bibliothek nicht erreichbar: ' + e.message); }
+    onCount && onCount(items.length);
     draw();
-    flash('Gespeichert: ' + n);
-  });
-
-  share.addEventListener('click', async () => {
-    const url = location.href.split('#')[0] + encodeShare(current());
-    try { await navigator.clipboard.writeText(url); flash('Link kopiert — wer ihn öffnet, sieht genau dieses Muster.'); }
-    catch { history.replaceState(null, '', encodeShare(current())); flash('Link steht jetzt in der Adresszeile.'); }
-  });
-
-  exp.addEventListener('click', async () => {
-    const data = JSON.stringify({ format: 'dfb-pattern-library', version: 1, items }, null, 2);
-    flash(await host.save({ filename: 'dfb-pattern-bibliothek.json', data }));
-  });
-
-  imp.addEventListener('change', async () => {
-    const f = imp.files && imp.files[0];
-    imp.value = '';
-    if (!f) return;
-    try {
-      const got = parseLibrary(JSON.parse(await f.text()));
-      const known = new Set(items.map((i) => i.id));
-      items = [...got.filter((i) => !known.has(i.id)), ...items];
-      write(items);
-      draw();
-      flash(`${got.length} Muster importiert.`);
-    } catch (e) {
-      flash('Diese Datei ist keine Muster-Bibliothek.');
-    }
-  });
-
-  if (host.libraryURL) {
-    fetch(host.libraryURL, { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { teamItems = j ? parseLibrary(j) : []; draw(); })
-      .catch(() => draw());
   }
 
   function draw() {
-    list(mine, items, true);
-    list(team, teamItems, false);
-    mineHead.hidden = false;
-    teamHead.hidden = team.hidden = !teamItems.length;
-    if (!items.length) mine.append(el('li', { class: 'empty' }, 'Noch nichts gespeichert. Gefällt dir ein Muster, gib ihm einen Namen und speichere es.'));
+    const q = search.value.trim().toLowerCase();
+    const shown = items.filter((i) => !q || (i.name + ' ' + (i.author || '')).toLowerCase().includes(q));
+    grid.replaceChildren(...shown.map(card));
+    empty.hidden = items.length > 0;
   }
 
-  function list(ul, arr, removable) {
-    ul.innerHTML = '';
-    for (const it of arr) {
-      const li = el('li');
-      const open = el('button', { type: 'button', class: 'lib-item', title: 'Laden' }, it.name);
-      open.addEventListener('click', () => { onLoad(it.settings); flash('Geladen: ' + it.name); });
-      li.append(open);
-      if (removable) {
-        const del = el('button', { type: 'button', class: 'lib-del', title: 'Löschen', 'aria-label': 'Löschen: ' + it.name }, '×');
-        del.addEventListener('click', () => {
-          if (del.dataset.armed) { items = items.filter((x) => x.id !== it.id); write(items); draw(); }
-          else { del.dataset.armed = '1'; del.textContent = 'Löschen?'; setTimeout(() => { delete del.dataset.armed; del.textContent = '×'; }, 2500); }
-        });
-        li.append(del);
+  function card(it) {
+    const c = el('article', { class: 'lib-card' });
+    const open = el('button', { type: 'button', class: 'lib-thumb', title: 'Im Werkzeug öffnen' });
+    if (it.thumb) { const img = el('img', { src: it.thumb, alt: '' }); open.append(img); }
+    else open.append(el('span', {}, it.name));
+    open.addEventListener('click', () => onOpen(it));
+    const name = el('div', { class: 'lib-name' }, it.name);
+    const meta = el('div', { class: 'lib-meta' }, [it.author, it.created ? new Date(it.created).toLocaleDateString('de-DE') : ''].filter(Boolean).join(' · '));
+    const actions = el('div', { class: 'lib-actions' });
+    const link = el('button', { type: 'button' }, 'Link');
+    const ren = el('button', { type: 'button' }, 'Umbenennen');
+    const del = el('button', { type: 'button', class: 'danger' }, 'Löschen');
+    link.addEventListener('click', async () => {
+      const url = location.href.split('#')[0] + encodeShare(it.settings);
+      try { await navigator.clipboard.writeText(url); flash('Link kopiert.'); }
+      catch { prompt('Link kopieren:', url); }
+    });
+    ren.addEventListener('click', () => {
+      const input = el('input', { type: 'text', value: it.name, 'aria-label': 'Neuer Name' });
+      name.replaceChildren(input);
+      input.focus();
+      input.select();
+      const done = async (save) => {
+        const v = input.value.trim();
+        if (save && v && v !== it.name) {
+          try { await store.rename(it.id, v); it.name = v; flash('Umbenannt.'); } catch (e) { flash('Umbenennen fehlgeschlagen: ' + e.message); }
+        }
+        name.textContent = it.name;
+      };
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); });
+      input.addEventListener('blur', () => done(true));
+    });
+    del.addEventListener('click', async () => {
+      if (!del.dataset.armed) {
+        del.dataset.armed = '1';
+        del.textContent = 'Wirklich löschen?';
+        setTimeout(() => { delete del.dataset.armed; del.textContent = 'Löschen'; }, 3000);
+        return;
       }
-      ul.append(li);
-    }
+      try { await store.remove(it.id); items = items.filter((x) => x.id !== it.id); onCount && onCount(items.length); draw(); flash('Gelöscht: ' + it.name); }
+      catch (e) { flash('Löschen fehlgeschlagen: ' + e.message); }
+    });
+    actions.append(link, ren, del);
+    c.append(open, name, meta, actions);
+    return c;
   }
 
-  draw();
-  return { node: box.node };
-}
+  async function save({ name, author, settings, thumb }) {
+    const it = await store.add({ name, author, settings, thumb });
+    items = [it, ...items];
+    onCount && onCount(items.length);
+    draw();
+    return it;
+  }
 
-function parseLibrary(j) {
-  const arr = Array.isArray(j) ? j : j && j.items;
-  if (!Array.isArray(arr)) throw new Error('no items');
-  return arr.filter((i) => i && i.settings && i.settings.params).map((i, k) => ({
-    id: String(i.id || 'imp' + k + Date.now().toString(36)), name: String(i.name || 'Muster'), created: i.created, settings: i.settings,
-  }));
+  refresh();
+  return { refresh, save };
 }
-
-function read() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } }
-function write(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch { /* storage blocked: list lives for this visit only */ } }
 
 export function encodeShare(settings) {
   const bytes = new TextEncoder().encode(JSON.stringify(settings));

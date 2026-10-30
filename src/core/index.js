@@ -14,8 +14,9 @@ import { createField, FIELD_DEFAULTS } from './field.js';
 import { toSVG, runPath } from './svg.js';
 
 export { PALETTE, COLOR_PAIRS, FORMATS, PRESETS, HYMNE, HYMNE_TEXT } from './presets.js';
-export { SCHEMA, getPath, setPath } from './schema.js';
+export { SCHEMA, FIELD_MODES, getPath, setPath } from './schema.js';
 export { LAYOUT_DEFAULTS, FIELD_DEFAULTS, createField, toWeight };
+export { stopMap } from './field.js';
 
 export function createEngine(fontBytes) {
   const bytes = fontBytes instanceof Uint8Array ? fontBytes : new Uint8Array(fontBytes);

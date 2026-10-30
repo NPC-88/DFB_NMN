@@ -35,8 +35,8 @@ export const HYMNE_TEXT =
   'Einigkeit und Recht und Freiheit sind des Glückes Unterpfand – ' +
   'Blüh im Glanze dieses Glückes, blühe, deutsches Vaterland!';
 
-// Hymne: 34.285 px as in Figma 1:26, weights 145 → 1000, fixed line height 1
-// and tracking 0; the gradient is HUK's parametric default.
+// Hymne: 34.285 px as in Figma 1:26, weights 145 → 1000, line height 1,
+// tracking 0, rows cut at the right edge; soft waves as in the first version.
 export const HYMNE = {
   id: 'hymne',
   name: 'Hymne',
@@ -46,13 +46,15 @@ export const HYMNE = {
     width: 1920, height: 1080,
     fontSize: 34.285,
     unit: 'word',
+    align: 'cut',
     minWeight: 145, maxWeight: 1000,
-    reverse: false,
     field: {
-      mode: 'parametric',
-      waves: 0.4, curve: 0.5, rotate: 0.2,
+      mode: 'waves',
+      angle: 90, bands: 1.5, phase: 0, wobble: 0.08, wobbleFreq: 1,
+      type: 'linear', a: { x: 0.15, y: 0.2 }, b: { x: 0.85, y: 0.8 }, waves: 0, bend: 0.1,
       size: 0.5,
-      points: [{ x: 0.25, y: 0.3, r: 0.18 }, { x: 0.7, y: 0.65, r: 0.22 }],
+      points: [{ x: 0.3, y: 0.35, r: 0.18 }, { x: 0.7, y: 0.65, r: 0.22 }],
+      stops: [{ pos: 0, value: 0 }, { pos: 1, value: 1 }],
       contrast: 0, offset: 0.5,
     },
   },

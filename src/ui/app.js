@@ -1,128 +1,203 @@
-// App shell: state, gradient panel, preview with zoom, colour pairs, library
-// and export. Host-specific things (how a file is saved, where the team
-// library lives) come from `host`.
+// App shell: state + undo history, top bar (tabs, colour, format, undo,
+// save, export), preview with zoom and font size, the control panel with the
+// gradient editor, and the library tab. Host-specific things (saving files)
+// come from `host`; the library backend from `store`.
 
 import { createEngine, SCHEMA, COLOR_PAIRS, FORMATS, PRESETS, setPath } from '../core/index.js';
-import { renderControls, panel, el } from './controls.js';
-import { createLibrary, encodeShare, decodeShare } from './library.js';
+import { renderControls, el } from './controls.js';
+import { createGradientEditor } from './gradient.js';
+import { createLibraryView, encodeShare, decodeShare } from './library.js';
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
-const ZOOMS = [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8];
+const ZOOMS = [0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8];
+const AUTHOR_KEY = 'dfb-pattern-author';
 
-export function startApp({ fontBytes, host }) {
+export function startApp({ fontBytes, host, store }) {
   const engine = createEngine(fontBytes);
   const preset = PRESETS[0];
   let params = clone(preset.params);
   let pairId = preset.colorPair;
-  let showField = false;
   let zoom = 'fit';
   let model = null;
+
+  const $ = (s) => document.querySelector(s);
+  const viewport = $('#viewport'), stage = $('#stage'), art = $('#art');
+  const pair = () => COLOR_PAIRS.find((c) => c.id === pairId) || COLOR_PAIRS[0];
 
   const shared = decodeShare(location.hash);
   if (shared) apply(shared);
 
-  const $ = (s) => document.querySelector(s);
-  const viewport = $('#viewport'), stage = $('#stage'), art = $('#art'), overlay = $('#overlay');
-  const status = $('#status');
-  const pair = () => COLOR_PAIRS.find((c) => c.id === pairId) || COLOR_PAIRS[0];
-
-  // --- Gradient panel (always visible, like HUK) ---------------------------
-  const grad = $('#gradient');
-  const gctx = grad.getContext('2d');
-  let drag = null;
-  const pts = () => params.field.points || [];
-  const toUV = (e) => { const r = grad.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height, r }; };
-  const hit = (u) => pts().findIndex((q) => Math.hypot((u.x - q.x) * u.r.width, (u.y - q.y) * u.r.height) < 14);
-  grad.addEventListener('pointerdown', (e) => {
-    if (params.field.mode !== 'points') return;
-    const u = toUV(e);
-    let i = hit(u);
-    if (i < 0) { setField('points', [...pts(), { x: u.x, y: u.y, r: 0.15 }]); i = pts().length - 1; }
-    drag = i;
-    grad.setPointerCapture(e.pointerId);
-  });
-  grad.addEventListener('pointermove', (e) => {
-    if (drag == null) { grad.style.cursor = params.field.mode === 'points' ? (hit(toUV(e)) >= 0 ? 'grab' : 'crosshair') : 'default'; return; }
-    const u = toUV(e);
-    setField('points', pts().map((q, k) => (k === drag ? { ...q, x: clamp(u.x), y: clamp(u.y) } : q)));
-  });
-  grad.addEventListener('pointerup', () => { drag = null; });
-  grad.addEventListener('dblclick', (e) => {
-    const i = hit(toUV(e));
-    if (i >= 0 && pts().length > 1) setField('points', pts().filter((_, k) => k !== i));
-  });
-  grad.addEventListener('wheel', (e) => {
-    const i = hit(toUV(e));
-    if (params.field.mode !== 'points' || i < 0) return;
+  // --- undo history ----------------------------------------------------------
+  const history = [JSON.stringify(snapshot())];
+  let hi = 0;
+  function commit() {
+    const s = JSON.stringify(snapshot());
+    if (s === history[hi]) return;
+    history.splice(hi + 1);
+    history.push(s);
+    if (history.length > 200) history.shift();
+    hi = history.length - 1;
+    syncUndo();
+  }
+  function travel(d) {
+    const n = hi + d;
+    if (n < 0 || n >= history.length) return;
+    hi = n;
+    apply(JSON.parse(history[hi]));
+    update(false);
+    syncUndo();
+  }
+  function syncUndo() { $('#undo').disabled = hi <= 0; $('#redo').disabled = hi >= history.length - 1; }
+  $('#undo').addEventListener('click', () => travel(-1));
+  $('#redo').addEventListener('click', () => travel(1));
+  document.addEventListener('keydown', (e) => {
+    if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'z') return;
+    if (e.target.closest('input[type=text], input[type=search], textarea')) return;
     e.preventDefault();
-    setField('points', pts().map((q, k) => (k === i ? { ...q, r: Math.min(0.6, Math.max(0.03, q.r * (e.deltaY < 0 ? 1.08 : 0.93))) } : q)));
-  }, { passive: false });
-  $('#showField').addEventListener('change', (e) => { showField = e.target.checked; update(); });
-
-  function setField(key, value) { params = setPath(clone(params), 'field.' + key, value); update(); }
-
-  // --- Controls -------------------------------------------------------------
-  const controls = renderControls($('#controls'), SCHEMA, {
-    get: () => params,
-    set: (key, value) => { params = setPath(clone(params), key, value); update(); },
-    formats: FORMATS,
-    formatOf: (p) => (FORMATS.find((f) => f.width === p.width && f.height === p.height) || { id: 'custom' }).id,
-    onFormat: (id) => {
-      const f = FORMATS.find((x) => x.id === id);
-      if (f && f.width) { params = { ...params, width: f.width, height: f.height }; zoom = 'fit'; update(); }
-    },
+    travel(e.shiftKey ? 1 : -1);
   });
 
-  // Colour pairs
-  const colorBox = panel('Farbe', true);
+  function set(key, value, opts = {}) { params = setPath(clone(params), key, value); update(!opts.transient); }
+  function setField(patch, opts = {}) { params = { ...params, field: { ...params.field, ...patch } }; update(!opts.transient); }
+
+  // --- tabs ------------------------------------------------------------------
+  const tabs = document.querySelectorAll('[role=tab]');
+  tabs.forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+  function showTab(id) {
+    tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === id)));
+    $('#tool').hidden = id !== 'tool';
+    $('#library').hidden = id !== 'library';
+    document.body.dataset.tab = id;
+    if (id === 'library') library.refresh();
+    else layoutStage();
+  }
+
+  // --- colour (two swatches) -------------------------------------------------
   const pairBtns = COLOR_PAIRS.map((c) => {
-    const b = el('button', { type: 'button', class: 'pair', 'data-id': c.id });
-    const sw = el('span', { class: 'pair-swatch' });
-    sw.style.background = c.background;
-    const ink = el('span', { class: 'pair-ink' }, 'Aa');
+    const b = el('button', { type: 'button', class: 'pair', title: c.name, 'aria-label': c.name, 'data-id': c.id });
+    b.style.background = c.background;
+    const ink = el('span', {}, 'Aa');
     ink.style.color = c.color;
-    sw.append(ink);
-    b.append(sw, el('span', {}, c.name));
+    b.append(ink);
     b.addEventListener('click', () => { pairId = c.id; update(); });
-    colorBox.body.append(b);
+    $('#colors').append(b);
     return b;
   });
-  colorBox.body.append(el('p', { class: 'hint' }, 'Exportiert wird nur die Musterfarbe, ohne Hintergrund.'));
-  $('#controls').prepend(colorBox.node);
 
-  // Library
-  const library = createLibrary({ host, onLoad: (s) => { apply(s); zoom = 'fit'; update(); }, current: () => snapshot(), flash });
-  $('#controls').append(library.node);
+  // --- format popover --------------------------------------------------------
+  const fmtList = $('#formatList');
+  for (const f of FORMATS.filter((x) => x.width)) {
+    const b = el('button', { type: 'button', class: 'menu-item', 'data-id': f.id }, f.name);
+    b.addEventListener('click', () => { params = { ...params, width: f.width, height: f.height }; zoom = 'fit'; update(); closePopovers(); });
+    fmtList.append(b);
+  }
+  const fw = $('#fmtW'), fh = $('#fmtH');
+  const setSize = () => {
+    const w = Math.min(10000, Math.max(50, +fw.value || params.width)), h = Math.min(10000, Math.max(50, +fh.value || params.height));
+    params = { ...params, width: w, height: h };
+    zoom = 'fit';
+    update();
+  };
+  fw.addEventListener('change', setSize);
+  fh.addEventListener('change', setSize);
 
-  // Reset
-  $('#reset').addEventListener('click', () => { params = clone(preset.params); pairId = preset.colorPair; zoom = 'fit'; history.replaceState(null, '', location.pathname); update(); });
+  // popovers (format, save)
+  document.querySelectorAll('[data-popover]').forEach((btn) => {
+    const pop = document.getElementById(btn.dataset.popover);
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = pop.hidden;
+      closePopovers();
+      pop.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      if (open) { const f = pop.querySelector('input'); if (f) f.focus(); }
+    });
+    pop.addEventListener('click', (e) => e.stopPropagation());
+  });
+  document.addEventListener('click', closePopovers);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePopovers(); });
+  function closePopovers() {
+    document.querySelectorAll('.popover').forEach((p) => { p.hidden = true; });
+    document.querySelectorAll('[data-popover]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  }
 
-  // Zoom
+  // --- controls + gradient editor --------------------------------------------
+  const controls = renderControls($('#controls'), SCHEMA, { get: () => params, set });
+  const gradBody = controls.bodies.gradient;
+  const editorRoot = el('div', { class: 'grad-editor' });
+  gradBody.prepend(editorRoot);
+  const editor = createGradientEditor(editorRoot, {
+    params: () => params,
+    setField,
+    fieldGrid: (cols, rows) => engine.fieldGrid(params, cols, rows),
+  });
+
+  // --- preview: zoom + font size ---------------------------------------------
   $('#zoomIn').addEventListener('click', () => stepZoom(1));
   $('#zoomOut').addEventListener('click', () => stepZoom(-1));
   $('#zoomFit').addEventListener('click', () => { zoom = 'fit'; layoutStage(); });
   $('#zoom100').addEventListener('click', () => { zoom = 1; layoutStage(); });
   new ResizeObserver(() => layoutStage()).observe(viewport);
+  const fsRange = $('#fontSize'), fsNum = $('#fontSizeNum');
+  fsRange.addEventListener('input', () => set('fontSize', +fsRange.value, { transient: true }));
+  fsRange.addEventListener('change', () => set('fontSize', +fsRange.value));
+  fsNum.addEventListener('change', () => { const v = Math.min(400, Math.max(4, +fsNum.value)); if (v) set('fontSize', v); });
 
-  // Export
+  // --- reset, export ---------------------------------------------------------
+  $('#reset').addEventListener('click', () => { params = clone(preset.params); pairId = preset.colorPair; zoom = 'fit'; window.history.replaceState(null, '', location.pathname); update(); });
   $('#download').addEventListener('click', async () => {
     if (!model) render();
-    const name = `DFB-${preset.name}-${params.unit}-${params.width}x${params.height}`;
+    const name = `DFB-${preset.name}-${params.field.mode}-${params.width}x${params.height}`;
     const svg = engine.svg(model, { color: pair().color, mode: $('#exportMode').value, title: name });
     flash(await host.save({ filename: name + '.svg', data: svg }));
   });
 
+  // --- library ---------------------------------------------------------------
+  const library = createLibraryView($('#library'), {
+    store,
+    flash,
+    onOpen: (it) => { apply(it.settings); zoom = 'fit'; showTab('tool'); update(); flash('Geöffnet: ' + it.name); },
+    onCount: (n) => { $('#libCount').textContent = n ? String(n) : ''; },
+  });
+  const saveName = $('#saveName'), saveAuthor = $('#saveAuthor');
+  try { saveAuthor.value = localStorage.getItem(AUTHOR_KEY) || ''; } catch { /* storage blocked */ }
+  $('#savePop').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = saveName.value.trim() || `Muster ${new Date().toLocaleString('de-DE')}`;
+    const author = saveAuthor.value.trim();
+    try { localStorage.setItem(AUTHOR_KEY, author); } catch { /* storage blocked */ }
+    const btn = $('#savePop button');
+    btn.disabled = true;
+    try {
+      await library.save({ name, author, settings: snapshot(), thumb: await thumbnail() });
+      saveName.value = '';
+      closePopovers();
+      flash(`Gespeichert: ${name} — zu finden unter „Bibliothek“.`);
+    } catch (err) {
+      flash('Speichern fehlgeschlagen: ' + err.message);
+    } finally { btn.disabled = false; }
+  });
+
+  // --- state -----------------------------------------------------------------
   function apply(s) {
     if (s.params) params = { ...clone(preset.params), ...s.params, field: { ...preset.params.field, ...(s.params.field || {}) } };
     if (s.colorPair && COLOR_PAIRS.some((c) => c.id === s.colorPair)) pairId = s.colorPair;
   }
-  function snapshot() { return { v: 1, params: clone(params), colorPair: pairId }; }
+  function snapshot() { return { v: 2, params: clone(params), colorPair: pairId }; }
 
   let queued = false;
-  function update() {
+  function update(record = true) {
+    if (record) commit();
     controls.sync();
+    editor.sync();
     pairBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === pairId)));
-    drawGradient();
+    const f = FORMATS.find((x) => x.width === params.width && x.height === params.height);
+    $('#formatBtn').textContent = (f ? f.name : `${params.width} × ${params.height}`) + ' ▾';
+    fmtList.querySelectorAll('.menu-item').forEach((b) => b.setAttribute('aria-pressed', String(f && b.dataset.id === f.id)));
+    if (document.activeElement !== fw) fw.value = params.width;
+    if (document.activeElement !== fh) fh.value = params.height;
+    fsRange.value = params.fontSize;
+    if (document.activeElement !== fsNum) fsNum.value = +params.fontSize.toFixed(2);
     if (queued) return;
     queued = true;
     requestAnimationFrame(() => { queued = false; render(); });
@@ -133,12 +208,10 @@ export function startApp({ fontBytes, host }) {
     model = engine.layout(params);
     art.innerHTML = engine.svg(model, { color: pair().color, mode: 'outlines', precision: 1 });
     stage.style.background = pair().background;
-    overlay.hidden = !showField;
-    if (showField) drawField(overlay, 200);
     layoutStage();
     const ws = model.lines.flatMap((l) => l.runs.flatMap((r) => r.glyphs.map((g) => g.weight)));
-    status.textContent = ws.length
-      ? `${model.lines.length} Zeilen · wght ${Math.min(...ws)}–${Math.max(...ws)} · ${Math.round(performance.now() - t0)} ms`
+    $('#status').textContent = ws.length
+      ? `${params.width} × ${params.height} · ${model.lines.length} Zeilen · wght ${Math.min(...ws)}–${Math.max(...ws)} · ${Math.round(performance.now() - t0)} ms`
       : 'Kein Text';
   }
 
@@ -157,38 +230,25 @@ export function startApp({ fontBytes, host }) {
     if (next) { zoom = next; layoutStage(); }
   }
 
-  // Gradient: dark = heavy (what the pattern will show), points on top.
-  function drawGradient() {
-    const cols = 240, rows = Math.max(1, Math.round((cols * params.height) / params.width));
-    grad.style.aspectRatio = `${params.width} / ${params.height}`;
-    drawField(grad, cols, rows);
-    document.querySelector('#gradHint').textContent = params.field.mode === 'points'
-      ? 'Punkt ziehen · Klick = neuer Punkt · Doppelklick = löschen · Mausrad = Größe'
-      : 'dunkel = schwer';
-    if (params.field.mode !== 'points') return;
-    const sx = grad.width, sy = grad.height;
-    for (const q of pts()) {
-      gctx.beginPath();
-      gctx.arc(q.x * sx, q.y * sy, 4, 0, Math.PI * 2);
-      gctx.fillStyle = '#ffffff'; gctx.fill();
-      gctx.lineWidth = 1.5; gctx.strokeStyle = '#000000'; gctx.stroke();
-      gctx.beginPath();
-      gctx.arc(q.x * sx, q.y * sy, q.r * sy, 0, Math.PI * 2);
-      gctx.setLineDash([3, 3]); gctx.strokeStyle = 'rgba(255,255,255,.7)'; gctx.stroke(); gctx.setLineDash([]);
-    }
-  }
-  function drawField(canvas, cols, rows = Math.max(1, Math.round((cols * params.height) / params.width))) {
-    const grid = engine.fieldGrid(params, cols, rows);
-    canvas.width = cols; canvas.height = rows;
-    const ctx = canvas.getContext('2d');
-    const img = ctx.createImageData(cols, rows);
-    for (let i = 0; i < grid.length; i++) {
-      const v = params.reverse ? 1 - grid[i] : grid[i];
-      const g = Math.round((1 - v) * 255);
-      img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = g;
-      img.data[i * 4 + 3] = 255;
-    }
-    ctx.putImageData(img, 0, 0);
+  // Small JPEG of the current pattern on its background, for the library grid.
+  function thumbnail() {
+    return new Promise((resolve) => {
+      if (!model) render();
+      const w = 480, h = Math.max(1, Math.round((w * params.height) / params.width));
+      const svgText = engine.svg(model, { color: pair().color, mode: 'outlines', precision: 1 });
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = pair().background;
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', 0.75));
+      };
+      img.onerror = () => resolve('');
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
+    });
   }
 
   function flash(msg) {
@@ -200,8 +260,8 @@ export function startApp({ fontBytes, host }) {
     flash.t = setTimeout(() => { n.hidden = true; }, 4000);
   }
 
-  update();
-  return { get params() { return params; }, get model() { return model; }, engine, share: () => encodeShare(snapshot()) };
+  showTab('tool');
+  update(false);
+  syncUndo();
+  return { get params() { return params; }, get model() { return model; }, engine, share: () => encodeShare(snapshot()), library };
 }
-
-const clamp = (v) => Math.min(1, Math.max(0, v));

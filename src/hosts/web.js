@@ -3,6 +3,8 @@
 // The font is embedded in every build, so the tool opens directly.
 import embedded from 'font:DFB_SANS_VAR_Italic.ttf';
 import { startApp } from '../ui/app.js';
+import { createStore } from '../ui/store.js';
+import { TEAM_LIBRARY } from '../config.js';
 
 const fromB64 = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
@@ -26,4 +28,4 @@ async function save({ filename, data }) {
   return 'Gespeichert: ' + filename;
 }
 
-window.dfbPattern = startApp({ fontBytes: fromB64(embedded), host: { save, libraryURL: 'library.json' } });
+window.dfbPattern = startApp({ fontBytes: fromB64(embedded), host: { save }, store: createStore(TEAM_LIBRARY) });

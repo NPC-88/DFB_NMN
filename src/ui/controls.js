@@ -5,10 +5,13 @@
 import { getPath } from '../core/schema.js';
 
 export function renderControls(root, schema, ctx) {
-  // ctx: { get(): params, set(key, value), formats, formatOf(params), onFormat(id) }
+  // ctx: { get(): params, set(key, value, { transient }) }
+  // transient: while a slider is dragged; the release commits (one undo step).
   const rows = [];
+  const bodies = {};
   for (const section of schema) {
     const box = panel(section.group, section.open);
+    bodies[section.id] = box.body;
     for (const c of section.controls) {
       const row = el('div', { class: 'row' + (c.type === 'textarea' ? ' wide' : ''), 'data-key': c.key });
       const input = make(c, ctx);
@@ -23,11 +26,11 @@ export function renderControls(root, schema, ctx) {
     const p = ctx.get();
     for (const { c, row, input } of rows) {
       row.hidden = c.when ? !c.when(p) : false;
-      input.set(c.type === 'format' ? ctx.formatOf(p) : getPath(p, c.key), p);
+      input.set(getPath(p, c.key), p);
     }
   };
   sync();
-  return { sync };
+  return { sync, bodies };
 }
 
 // Collapsible section (native <details>, + / − marker in CSS).
@@ -44,19 +47,14 @@ function make(c, ctx) {
   switch (c.type) {
     case 'textarea': {
       const t = el('textarea', { rows: 6, spellcheck: 'false', id: 'ctl-' + c.key.replace(/\W/g, '-'), 'aria-label': c.label });
-      t.addEventListener('input', () => ctx.set(c.key, t.value));
+      t.addEventListener('input', () => ctx.set(c.key, t.value, { transient: true }));
+      t.addEventListener('change', () => ctx.set(c.key, t.value));
       return { node: t, set: (v) => { if (document.activeElement !== t) t.value = v ?? ''; } };
     }
     case 'toggle': {
       const t = el('input', { type: 'checkbox', id: 'ctl-' + c.key.replace(/\W/g, '-') });
       t.addEventListener('change', () => ctx.set(c.key, t.checked));
       return { node: t, set: (v) => { t.checked = !!v; } };
-    }
-    case 'format': {
-      const s = el('select', { id: 'ctl-format' });
-      for (const f of ctx.formats) s.append(el('option', { value: f.id }, f.name));
-      s.addEventListener('change', () => ctx.onFormat(s.value));
-      return { node: s, set: (v) => { s.value = v; } };
     }
     case 'segmented': {
       const wrap = el('div', { class: 'segmented', role: 'radiogroup' });
@@ -80,7 +78,8 @@ function make(c, ctx) {
       const out = el('output', { class: 'value' });
       wrap.append(r, out);
       const show = (v) => { out.textContent = c.step >= 1 ? Math.round(v) : (+v).toFixed(c.step < 0.01 ? 3 : 2); };
-      r.addEventListener('input', () => { show(r.value); ctx.set(c.key, parseFloat(r.value)); });
+      r.addEventListener('input', () => { show(r.value); ctx.set(c.key, parseFloat(r.value), { transient: true }); });
+      r.addEventListener('change', () => ctx.set(c.key, parseFloat(r.value)));
       return { node: wrap, set: (v) => { r.value = v; show(v); } };
     }
   }

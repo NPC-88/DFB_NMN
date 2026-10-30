@@ -20,20 +20,52 @@ npm test
 
 ### What the tool does
 
-- Repeats the text in capitals until it **fills the format exactly**: the ink starts in the
-  top-left corner, every row is justified to the full width (word spacing), and rows are spread
-  so the last one sits on the bottom edge. Nothing is cut. Line height 1 (minimum) and tracking 0
-  are fixed.
-- **Verlauf** (gradient), always visible, ported from the HUK pattern generator:
-  *Parametrisch* (Wellen, Kurve, Drehung) and *Punkte* (drag points; click adds, double-click
-  removes, mouse wheel changes size). Plus Kontrast and Leichter ↔ schwerer. Dark = heavy.
-- **Gewicht je** Zeile / Wort / Buchstabe, Umkehren, lightest/heaviest weight.
-- **Format** presets or custom size, Schriftgröße; preview zoom (− / + / Einpassen / 100 %).
-- **Farbe:** Hellgold auf Gold, Schwarz auf Graphit (as in Figma). Export = pattern colour only.
-- **Bibliothek:** save settings by name (this browser), *Link kopieren* (the link opens exactly
-  that pattern for anyone), export/import as JSON. The **Team** list is `docs/library.json`:
-  add entries there (export from the tool, paste the items) and everyone sees them.
-- **Export:** SVG as outlined paths (exact weights), paths + hidden live text, or live text only.
+- Repeats the text in capitals until the format is full. The ink starts in the top-left corner;
+  rows are spread so nothing is ever cut at the top or bottom. Line height 1 (minimum), tracking 0.
+- **Zeilenende:** *Angeschnitten* (default, rows run past the right edge and are cut there),
+  *Flattersatz* (left-aligned, ragged), *Bündig* (justified with word spacing).
+- **Verlauf** (gradient), always visible with its handles:
+  *Wellen* (repeating bands) and *Verlauf* (one gradient) from the first version; *Parametrisch*
+  (linear or radial between two handles, plus HUK's sine "Wellen"); *Punkte* (drag the dot to move,
+  the blue handle to resize, × to delete, click empty space to add).
+  A Figma-style **stop bar** shapes the gradient in every mode (click the bar to add a stop, drag
+  to move, select to set its value or delete; ⇄ flips, ⟳ turns 90°). Dark = heavy.
+- **Gewicht je** Zeile / Wort / Buchstabe, lightest/heaviest weight.
+- Top bar: tabs *Werkzeug / Bibliothek*, colour (Hellgold auf Gold, Schwarz auf Graphit), format
+  menu (presets + custom size), undo/redo (⌘Z / ⇧⌘Z), *Speichern*, SVG export.
+  Font size and zoom sit under the preview.
+- **Bibliothek** tab: saved patterns as previews; open, copy link, rename, delete.
+- **Export:** SVG in the pattern colour only, no background: outlined paths (exact weights),
+  paths + hidden live text, or live text only.
+
+### Team library (Firebase, free)
+
+Until it is connected, saved patterns stay in each person's browser. To share one library:
+
+1. With a team Google account, open <https://console.firebase.google.com> → *Add project*
+   (Google Analytics not needed). The free *Spark* plan needs no credit card.
+2. *Build → Firestore Database → Create database*, location `eur3 (europe-west)`, *production mode*.
+3. *Rules* tab, paste and publish:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{db}/documents {
+       match /patterns/{id} {
+         allow read: if true;
+         allow create: if request.resource.data.keys().hasOnly(['name','author','thumb','settings','created'])
+                       && request.resource.data.name is string && request.resource.data.name.size() < 120
+                       && request.resource.data.settings.size() < 200000 && request.resource.data.thumb.size() < 400000;
+         allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name']);
+         allow delete: if true;
+       }
+     }
+   }
+   ```
+4. *Project settings → General → Your apps → Web (</>)*, register an app, copy `projectId` and
+   `apiKey` into `src/config.js`, run `npm run build`, commit.
+
+Anyone with the page link can read, add, rename and delete patterns (no login), which suits an
+internal tool; the free plan allows 50,000 reads and 20,000 writes per day.
 
 ## Structure
 
@@ -46,9 +78,11 @@ src/core/          pattern engine — no DOM; runs in browser, Figma UI and Node
   presets.js       palette, formats, Hymne preset (values from the supplied material)
   schema.js        every control: type, range, label — UIs render from this
   index.js         createEngine(fontBytes) → { layout, svg, fieldGrid, font }
-src/ui/            placeholder UI: controls from the schema, gradient panel, library, zoom
+src/ui/            placeholder UI: app shell, controls from the schema, gradient editor,
+                   library tab, store.js (browser or Firestore)
+src/config.js      team library connection (Firebase project id + api key)
 src/hosts/         web.js (font loading, saving) · figma-ui.js (parked)
-docs/              GitHub Pages build + library.json (team library)
+docs/              GitHub Pages build
 figma/             manifest.json, code.js (canvas side); ui.html is built
 scripts/           build.mjs (esbuild, inlines everything), fonts.mjs (unpacks the font)
 test/              node:test suites (engine, Figma plugin against a mock API) + render helpers

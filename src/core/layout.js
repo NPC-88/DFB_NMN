@@ -1,8 +1,11 @@
-// Pattern layout: repeats the text (capitals) until it fills the frame exactly.
-// - The ink starts in the top-left corner and ends in the bottom-right one:
-//   rows are justified to the full width, and spread so the first row's tallest
-//   letters touch the top and the last row's lowest marks touch the bottom.
-// - Nothing is cut: a word that does not fit moves to the next row.
+// Pattern layout: repeats the text (capitals) until it fills the frame.
+// - The ink starts in the top-left corner. Rows are spread so the first row's
+//   tallest letters touch the top and the last row's lowest marks the bottom:
+//   nothing is ever cut at the top or bottom.
+// - Row ends (align):
+//     cut      rows run past the right edge and are cut there (default)
+//     ragged   left-aligned, a word that does not fit moves to the next row
+//     justify  as ragged, then word spacing stretches the row to the right edge
 // - Every unit (line, word or letter) gets a weight from the gradient field.
 // Output is a plain model (no DOM, no SVG) that any renderer can draw.
 
@@ -13,6 +16,7 @@ export const LAYOUT_DEFAULTS = {
   width: 1920, height: 1080,
   fontSize: 34.285,          // px; also the nominal row pitch (line height 1, tracking 0)
   unit: 'word',              // 'line' | 'word' | 'letter' — what one weight value covers
+  align: 'cut',              // 'cut' | 'ragged' | 'justify'
   minWeight: 145, maxWeight: 1000,
   reverse: false,            // false: dark/heavy where the gradient is high
   field: {},                 // see field.js
@@ -50,13 +54,13 @@ export function layoutPattern(font, params) {
       if (runs.length) x += spaceAdvance(lastWeight(runs));
       const run = placeWord(word, x, midY, lineWeight);
       if (!runs.length) shiftRun(run, -inkLeft(run));          // ink touches the left edge
-      if (runs.length && inkRight(run) > W) break;             // does not fit: next row
+      if (p.align !== 'cut' && runs.length && inkRight(run) > W) break;   // does not fit: next row
       runs.push(run);
       wi++;
       x = run.end;
-      if (inkRight(run) > W) break;                            // one word wider than the frame
+      if (inkRight(run) > W) break;                            // reached (or crossed) the right edge
     }
-    justify(runs, W);
+    if (p.align === 'justify') justify(runs, W);
     lines.push({ baseline, runs });
   }
 
