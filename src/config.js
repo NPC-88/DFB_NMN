@@ -6,7 +6,7 @@
 // Both are public by design (they identify the project, not a password);
 // what may be read and written is set by the Firestore rules (see README).
 export const TEAM_LIBRARY = {
-  projectId: '',
-  apiKey: '',
+  projectId: 'dfbsp-8a077',
+  apiKey: 'AIzaSyB3pwo5KIcvMJHJx2H4GJ5cSmPD-Z_QprU',
   collection: 'patterns',
 };
