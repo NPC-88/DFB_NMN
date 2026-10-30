@@ -2,14 +2,14 @@
 // Open loads a pattern into the tool; Link copies a link that opens exactly
 // that pattern; rename and delete work on the shared library for everyone.
 
-import { el } from './controls.js';
+import { el, iconButton } from './controls.js';
 
 export function createLibraryView(root, { store, onOpen, flash, onCount }) {
   const head = el('div', { class: 'lib-head' });
   const title = el('h2', {}, 'Bibliothek');
   const where = el('span', { class: 'hint' }, store.shared ? 'Für das ganze Team' : 'Nur in diesem Browser — die Team-Bibliothek ist noch nicht verbunden');
-  const search = el('input', { type: 'search', id: 'lib-search', placeholder: 'Suchen', 'aria-label': 'Bibliothek durchsuchen' });
-  const reload = el('button', { type: 'button' }, 'Aktualisieren');
+  const search = el('input', { type: 'search', id: 'lib-search', placeholder: 'Suchen', 'aria-label': 'Bibliothek durchsuchen', class: 'input' });
+  const reload = iconButton('reset', 'Aktualisieren', { variant: 'secondary', size: 'medium' });
   head.append(title, where, el('span', { class: 'spacer' }), search, reload);
   const grid = el('div', { class: 'lib-grid' });
   const empty = el('p', { class: 'lib-empty' }, 'Noch keine Muster. Im Werkzeug auf „Speichern“ klicken, um das aktuelle Muster hier abzulegen.');
@@ -36,22 +36,22 @@ export function createLibraryView(root, { store, onOpen, flash, onCount }) {
   function card(it) {
     const c = el('article', { class: 'lib-card' });
     const open = el('button', { type: 'button', class: 'lib-thumb', title: 'Im Werkzeug öffnen' });
-    if (it.thumb) { const img = el('img', { src: it.thumb, alt: '' }); open.append(img); }
+    if (it.thumb) { const img = el('img', { src: it.thumb, alt: '', loading: 'lazy' }); open.append(img); }
     else open.append(el('span', {}, it.name));
     open.addEventListener('click', () => onOpen(it));
     const name = el('div', { class: 'lib-name' }, it.name);
     const meta = el('div', { class: 'lib-meta' }, [it.author, it.created ? new Date(it.created).toLocaleDateString('de-DE') : ''].filter(Boolean).join(' · '));
     const actions = el('div', { class: 'lib-actions' });
-    const link = el('button', { type: 'button' }, 'Link');
-    const ren = el('button', { type: 'button' }, 'Umbenennen');
-    const del = el('button', { type: 'button', class: 'danger' }, 'Löschen');
+    const link = iconButton('share', 'Link kopieren');
+    const ren = iconButton('edit', 'Umbenennen');
+    const del = iconButton('trash', 'Löschen');
     link.addEventListener('click', async () => {
       const url = location.href.split('#')[0] + encodeShare(it.settings);
       try { await navigator.clipboard.writeText(url); flash('Link kopiert.'); }
       catch { prompt('Link kopieren:', url); }
     });
     ren.addEventListener('click', () => {
-      const input = el('input', { type: 'text', value: it.name, 'aria-label': 'Neuer Name' });
+      const input = el('input', { type: 'text', value: it.name, 'aria-label': 'Neuer Name', class: 'input' });
       name.replaceChildren(input);
       input.focus();
       input.select();
@@ -66,12 +66,7 @@ export function createLibraryView(root, { store, onOpen, flash, onCount }) {
       input.addEventListener('blur', () => done(true));
     });
     del.addEventListener('click', async () => {
-      if (!del.dataset.armed) {
-        del.dataset.armed = '1';
-        del.textContent = 'Wirklich löschen?';
-        setTimeout(() => { delete del.dataset.armed; del.textContent = 'Löschen'; }, 3000);
-        return;
-      }
+      if (!(await confirmDelete(it.name))) return;
       try { await store.remove(it.id); items = items.filter((x) => x.id !== it.id); onCount && onCount(items.length); draw(); flash('Gelöscht: ' + it.name); }
       catch (e) { flash('Löschen fehlgeschlagen: ' + e.message); }
     });
@@ -86,6 +81,15 @@ export function createLibraryView(root, { store, onOpen, flash, onCount }) {
     onCount && onCount(items.length);
     draw();
     return it;
+  }
+
+  // Toolkit Modal (error variant) to confirm a delete for everyone.
+  function confirmDelete(name) {
+    const d = document.getElementById('confirmDialog');
+    d.querySelector('.modal-text').textContent = `„${name}“ wird für das ganze Team gelöscht.`;
+    d.returnValue = '';
+    d.showModal();
+    return new Promise((resolve) => d.addEventListener('close', () => resolve(d.returnValue === 'ok'), { once: true }));
   }
 
   refresh();

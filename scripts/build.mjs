@@ -29,6 +29,7 @@ async function bundle(entry, embed = true) {
     bundle: true, format: 'iife', platform: 'browser', target: 'es2020',
     minify: true, write: false, legalComments: 'none',
     plugins: [fontPlugin(embed)],
+    loader: { '.svg': 'text' },
   });
   return r.outputFiles[0].text;
 }

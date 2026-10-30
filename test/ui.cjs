@@ -12,6 +12,18 @@ const path = require('path'); const fs = require('fs'); const http = require('ht
   const pg = await b.newPage({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
   pg.on('pageerror', (e) => errors.push(e.message));
   const P = () => pg.evaluate(() => window.dfbPattern.params);
+  // Never touch the real team library: answer Firestore calls from memory.
+  const docs = new Map(); let n = 0;
+  await pg.context().route(/firestore\.googleapis\.com/, async (route) => {
+    const req = route.request(); const u = new URL(req.url()); const id = u.pathname.split('/').pop();
+    const name = (i) => 'projects/p/databases/(default)/documents/patterns/' + i;
+    const json = (b) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
+    if (req.method() === 'GET') return json({ documents: [...docs.values()].reverse() });
+    if (req.method() === 'POST') { const i = 'd' + ++n; const d = { name: name(i), ...JSON.parse(req.postData()) }; docs.set(i, d); return json(d); }
+    if (req.method() === 'PATCH') { Object.assign(docs.get(id).fields, JSON.parse(req.postData()).fields); return json(docs.get(id)); }
+    if (req.method() === 'DELETE') { docs.delete(id); return json({}); }
+    return route.fulfill({ status: 400 });
+  });
   const log = (...a) => console.log(...a);
 
   await pg.goto('http://localhost:8765/');
@@ -23,8 +35,8 @@ const path = require('path'); const fs = require('fs'); const http = require('ht
   const bar = await pg.locator('.stops-bar').boundingBox();
   await pg.mouse.click(bar.x + bar.width * 0.5, bar.y + bar.height / 2);
   log('stops after click:', (await P()).field.stops.length);
-  await pg.locator('#stop-value').fill('1');
-  await pg.locator('#stop-value').dispatchEvent('change');
+  await pg.locator('#ctl-stop-value').fill('1');
+  await pg.locator('#ctl-stop-value').dispatchEvent('change');
   const sel = await pg.locator('.stop.sel').boundingBox();
   await pg.mouse.move(sel.x + 8, sel.y + 9); await pg.mouse.down();
   await pg.mouse.move(bar.x + bar.width * 0.35, sel.y + 9, { steps: 6 }); await pg.mouse.up();
@@ -75,13 +87,18 @@ const path = require('path'); const fs = require('fs'); const http = require('ht
   // save → library tab → open
   await pg.click('#saveBtn');
   await pg.fill('#saveName', 'Test Welle'); await pg.fill('#saveAuthor', 'NC');
-  await pg.click('#savePop button[type=submit]');
+  await pg.click('#saveForm button[type=submit]');
   await pg.waitForTimeout(500);
   await pg.click('#reset');
   await pg.click('[role=tab][data-tab=library]');
   await pg.waitForSelector('.lib-card');
   log('library cards:', await pg.$$eval('.lib-card .lib-name', (n) => n.map((x) => x.textContent)), 'tab count:', await pg.textContent('#libCount'));
   await pg.screenshot({ path: 'test/out/v3-library.png' });
+  // delete via the confirm modal
+  await pg.hover('.lib-card'); await pg.click('.lib-card button[aria-label="Löschen"]');
+  await pg.screenshot({ path: 'test/out/v3-confirm.png' });
+  await pg.click('#confirmDialog button[value=cancel]');
+  log('after cancel:', await pg.$$eval('.lib-card', (n) => n.length));
   await pg.click('.lib-card .lib-thumb');
   await pg.waitForTimeout(300);
   log('reopened:', JSON.stringify((({ width, fontSize }) => ({ width, fontSize }))(await P())), 'tool visible:', await pg.isVisible('#tool'));

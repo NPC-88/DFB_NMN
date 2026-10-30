@@ -5,37 +5,26 @@
 //       Punkte: drag the dot to move, drag the ring handle to resize, × to delete,
 //               click empty space to add
 //   - stop bar: drag stops, click the bar to add one, select one to set its
-//     value or delete it; ⇄ flips, ⟳ turns the parametric gradient by 90°
+//     value or delete it; flip reverses it, rotate turns it by 90°
 // All edits go through ctx.setField(patch, { transient }) so the app can keep
 // undo history (transient = while dragging; the drop commits).
 
 import { FIELD_MODES, stopMap } from '../core/index.js';
-import { el } from './controls.js';
+import { el, chips, slider, iconButton } from './controls.js';
 
 const SVGNS = 'http://www.w3.org/2000/svg';
 const svg = (tag, attrs = {}) => { const n = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); return n; };
 
 export function createGradientEditor(root, ctx) {
   // ctx: { params(), setField(patch, opts), fieldGrid(cols, rows) }
-  const modeBar = el('div', { class: 'segmented modes', role: 'radiogroup', 'aria-label': 'Art des Verlaufs' });
-  const modeBtns = FIELD_MODES.map(([v, l]) => {
-    const b = el('button', { type: 'button', 'data-value': v }, l);
-    b.addEventListener('click', () => ctx.setField({ mode: v }));
-    modeBar.append(b);
-    return b;
-  });
+  const modes = chips(null, FIELD_MODES, (v) => ctx.setField({ mode: v }));
+  modes.node.classList.add('modes');
 
   const typeBar = el('div', { class: 'grad-tools' });
-  const typeSel = el('div', { class: 'segmented small' });
-  const typeBtns = [['linear', 'Linear'], ['radial', 'Radial']].map(([v, l]) => {
-    const b = el('button', { type: 'button', 'data-value': v }, l);
-    b.addEventListener('click', () => ctx.setField({ type: v }));
-    typeSel.append(b);
-    return b;
-  });
-  const flip = el('button', { type: 'button', class: 'icon', title: 'Verlauf umkehren', 'aria-label': 'Verlauf umkehren' }, '⇄');
-  const turn = el('button', { type: 'button', class: 'icon', title: 'Um 90° drehen', 'aria-label': 'Um 90° drehen' }, '⟳');
-  typeBar.append(typeSel, el('span', { class: 'spacer' }), flip, turn);
+  const types = chips(null, [['linear', 'Linear'], ['radial', 'Radial']], (v) => ctx.setField({ type: v }), { small: true });
+  const flip = iconButton('flip', 'Verlauf umkehren');
+  const turn = iconButton('rotate', 'Um 90° drehen');
+  typeBar.append(types.node, el('span', { class: 'spacer' }), flip, turn);
 
   const stage = el('div', { class: 'grad-stage' });
   const canvas = el('canvas', { width: 240, height: 135, class: 'grad-canvas' });
@@ -43,17 +32,18 @@ export function createGradientEditor(root, ctx) {
   stage.append(canvas, overlay);
 
   const stopsWrap = el('div', { class: 'stops' });
-  const bar = el('div', { class: 'stops-bar', title: 'Klicken: Stopp hinzufügen' });
+  const bar = el('div', { class: 'stops-bar', 'data-tip': 'Klicken: Stopp hinzufügen' });
   const markers = el('div', { class: 'stops-markers' });
   stopsWrap.append(bar, markers);
   const stopRow = el('div', { class: 'stop-row' });
-  const stopLabel = el('span', { class: 'label' }, 'Stopp');
-  const stopValue = el('input', { type: 'range', min: 0, max: 1, step: 0.005, id: 'stop-value', 'aria-label': 'Wert des Stopps (hell = leicht, dunkel = schwer)' });
-  const stopDel = el('button', { type: 'button', class: 'icon', title: 'Stopp löschen', 'aria-label': 'Stopp löschen' }, '−');
-  const stopAdd = el('button', { type: 'button', class: 'icon', title: 'Stopp hinzufügen', 'aria-label': 'Stopp hinzufügen' }, '+');
-  stopRow.append(stopLabel, stopValue, stopDel, stopAdd);
+  const stopSlider = slider({ key: 'stop-value', label: 'Stopp', min: 0, max: 1, step: 0.005 },
+    (v, transient) => setStop(selStop, { value: v }, transient));
+  const stopLabel = stopSlider.node.querySelector('label');
+  const stopDel = iconButton('remove', 'Stopp löschen');
+  const stopAdd = iconButton('add', 'Stopp hinzufügen');
+  stopRow.append(stopSlider.node, stopDel, stopAdd);
 
-  root.append(modeBar, typeBar, stage, stopsWrap, stopRow);
+  root.append(modes.node, typeBar, stage, stopsWrap, stopRow);
 
   let selStop = 1;
   let selPoint = 0;
@@ -74,8 +64,6 @@ export function createGradientEditor(root, ctx) {
     selStop = next.findIndex((s) => s.pos === pos);
     ctx.setField({ stops: next });
   });
-  stopValue.addEventListener('input', () => setStop(selStop, { value: +stopValue.value }, true));
-  stopValue.addEventListener('change', () => setStop(selStop, { value: +stopValue.value }, false));
   stopDel.addEventListener('click', () => deleteStop());
   stopAdd.addEventListener('click', () => {
     const s = stops().sort((a, b) => a.pos - b.pos);
@@ -208,23 +196,23 @@ export function createGradientEditor(root, ctx) {
       m.addEventListener('pointerdown', (e) => {
         selStop = i;
         markers.querySelectorAll('.stop').forEach((n, k) => n.classList.toggle('sel', k === i));
-        stopValue.value = st.value;
+        stopSlider.set(st.value);
         let moved = false;
         drag(e, (_, ev) => { moved = true; setStop(i, { pos: posFromEvent(ev) }, true); },
           (_, ev) => { if (moved) setStop(i, { pos: posFromEvent(ev) }, false); focusStop(); });
       });
       markers.append(m);
     });
-    stopValue.value = s[selStop] ? s[selStop].value : 0;
+    stopSlider.set(s[selStop] ? s[selStop].value : 0);
     stopLabel.textContent = s[selStop] ? `Stopp ${Math.round(s[selStop].pos * 100)} %` : 'Stopp';
     stopDel.disabled = s.length <= 2;
   }
 
   function sync() {
     const fld = f();
-    modeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === fld.mode)));
-    typeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === fld.type)));
-    typeSel.hidden = fld.mode !== 'parametric';
+    modes.set(fld.mode);
+    types.set(fld.type);
+    types.node.hidden = fld.mode !== 'parametric';
     turn.hidden = fld.mode === 'points';
     drawCanvas();
     drawOverlay();

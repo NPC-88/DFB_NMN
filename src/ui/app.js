@@ -7,6 +7,7 @@ import { createEngine, SCHEMA, COLOR_PAIRS, FORMATS, PRESETS, setPath } from '..
 import { renderControls, el } from './controls.js';
 import { createGradientEditor } from './gradient.js';
 import { createLibraryView, encodeShare, decodeShare } from './library.js';
+import { icon, hydrateIcons } from './icons.js';
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const ZOOMS = [0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8];
@@ -21,6 +22,7 @@ export function startApp({ fontBytes, host, store }) {
   let model = null;
 
   const $ = (s) => document.querySelector(s);
+  hydrateIcons();
   const viewport = $('#viewport'), stage = $('#stage'), art = $('#art');
   const pair = () => COLOR_PAIRS.find((c) => c.id === pairId) || COLOR_PAIRS[0];
 
@@ -145,6 +147,7 @@ export function startApp({ fontBytes, host, store }) {
 
   // --- reset, export ---------------------------------------------------------
   $('#reset').addEventListener('click', () => { params = clone(preset.params); pairId = preset.colorPair; zoom = 'fit'; window.history.replaceState(null, '', location.pathname); update(); });
+  $('#exportMode').addEventListener('change', (e) => { $('#exportLabel').textContent = e.target.selectedOptions[0].textContent; });
   $('#download').addEventListener('click', async () => {
     if (!model) render();
     const name = `DFB-${preset.name}-${params.field.mode}-${params.width}x${params.height}`;
@@ -161,17 +164,20 @@ export function startApp({ fontBytes, host, store }) {
   });
   const saveName = $('#saveName'), saveAuthor = $('#saveAuthor');
   try { saveAuthor.value = localStorage.getItem(AUTHOR_KEY) || ''; } catch { /* storage blocked */ }
-  $('#savePop').addEventListener('submit', async (e) => {
+  const saveDialog = $('#saveDialog');
+  $('#saveBtn').addEventListener('click', () => { closePopovers(); saveDialog.showModal(); saveName.focus(); });
+  $('#saveCancel').addEventListener('click', () => saveDialog.close());
+  $('#saveForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = saveName.value.trim() || `Muster ${new Date().toLocaleString('de-DE')}`;
     const author = saveAuthor.value.trim();
     try { localStorage.setItem(AUTHOR_KEY, author); } catch { /* storage blocked */ }
-    const btn = $('#savePop button');
+    const btn = $('#saveForm button[type=submit]');
     btn.disabled = true;
     try {
       await library.save({ name, author, settings: snapshot(), thumb: await thumbnail() });
       saveName.value = '';
-      closePopovers();
+      saveDialog.close();
       flash(`Gespeichert: ${name} — zu finden unter „Bibliothek“.`);
     } catch (err) {
       flash('Speichern fehlgeschlagen: ' + err.message);
@@ -192,11 +198,12 @@ export function startApp({ fontBytes, host, store }) {
     editor.sync();
     pairBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === pairId)));
     const f = FORMATS.find((x) => x.width === params.width && x.height === params.height);
-    $('#formatBtn').textContent = (f ? f.name : `${params.width} × ${params.height}`) + ' ▾';
+    $('#formatBtn .dd-value').textContent = f ? f.name : `${params.width} × ${params.height}`;
     fmtList.querySelectorAll('.menu-item').forEach((b) => b.setAttribute('aria-pressed', String(f && b.dataset.id === f.id)));
     if (document.activeElement !== fw) fw.value = params.width;
     if (document.activeElement !== fh) fh.value = params.height;
     fsRange.value = params.fontSize;
+    fsRange.style.setProperty('--fill', ((params.fontSize - fsRange.min) / (fsRange.max - fsRange.min)) * 100 + '%');
     if (document.activeElement !== fsNum) fsNum.value = +params.fontSize.toFixed(2);
     if (queued) return;
     queued = true;
@@ -251,10 +258,19 @@ export function startApp({ fontBytes, host, store }) {
     });
   }
 
-  function flash(msg) {
+  // Toast (toolkit: none / success / error), closes itself after 4 s.
+  function flash(msg, kind) {
     if (!msg) return;
-    const n = $('#message');
-    n.textContent = msg;
+    kind = kind || (/fehl|nicht|Fehler|abgebrochen/i.test(msg) ? 'error' : /^(Gespeichert|Geöffnet|Link kopiert|Umbenannt|Gelöscht)/.test(msg) ? 'success' : 'none');
+    const n = $('#toast');
+    n.className = 'toast toast-' + kind;
+    n.replaceChildren();
+    if (kind !== 'none') n.append(icon(kind === 'success' ? 'success' : 'error', 20));
+    const text = el('span', { class: 'toast-text' }, msg);
+    const close = el('button', { type: 'button', class: 'btn btn-icon btn-ghost btn-small', 'aria-label': 'Schließen' });
+    close.append(icon('close', 16));
+    close.addEventListener('click', () => { n.hidden = true; });
+    n.append(text, close);
     n.hidden = false;
     clearTimeout(flash.t);
     flash.t = setTimeout(() => { n.hidden = true; }, 4000);
