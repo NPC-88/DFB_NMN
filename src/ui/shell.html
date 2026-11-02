@@ -34,12 +34,37 @@
   --warning: #9e5836;
   --shadow-card: 0 8px 20px #00000026;   /* cards/shadow-hover */
   --shadow-bar: 0 15px 20px #0000001a;   /* tab bar/shadow-default */
+  --press: #00000026; --line-soft: #0000001a;
   /* type: DFB Sans Pro (variable, embedded by the build) */
   --font-ui: "DFB Sans Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
   --fs-label: 16px; --fs-small: 12px; --fs-body: 14px;
   /* sizes */
   --r-input: 12px; --r-card: 8px; --r-pill: 160px;
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s6: 24px;
+}
+/* Dark: the toolkit's on-emphasis colours (gold #A9936F on graphite). Follows the
+   system unless the viewer picked a theme with the switch (data-theme). */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --fg: #f2f2f2; --fg-2: #b4b6ba; --fg-muted: #a1a5ac;
+  --highlight: #a9936f; --highlight-hover: #baa98c; --highlight-pressed: #8f7b5a; --on-highlight: #1a1a1a;
+  --bg: #1f1f1f; --bg-page: #141414; --bg-tertiary: #303133;
+  --stroke: #6b6f75; --stroke-muted: #4a4d52; --stroke-strong: #f2f2f2;
+  --ghost-hover: #a9936f33; --ghost-pressed: #a9936f59; --subtle: #ffffff08; --subtle-hover: #ffffff1a; --press: #ffffff26;
+  --focus: #5eb1ff;
+  --error: #e07a7a; --error-bg: #3a2020; --success: #57b892; --success-bg: #163229;
+  --line-soft: #ffffff1f; --shadow-card: 0 8px 20px #00000080;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --fg: #f2f2f2; --fg-2: #b4b6ba; --fg-muted: #a1a5ac;
+  --highlight: #a9936f; --highlight-hover: #baa98c; --highlight-pressed: #8f7b5a; --on-highlight: #1a1a1a;
+  --bg: #1f1f1f; --bg-page: #141414; --bg-tertiary: #303133;
+  --stroke: #6b6f75; --stroke-muted: #4a4d52; --stroke-strong: #f2f2f2;
+  --ghost-hover: #a9936f33; --ghost-pressed: #a9936f59; --subtle: #ffffff08; --subtle-hover: #ffffff1a; --press: #ffffff26;
+  --focus: #5eb1ff;
+  --error: #e07a7a; --error-bg: #3a2020; --success: #57b892; --success-bg: #163229;
+  --line-soft: #ffffff1f; --shadow-card: 0 8px 20px #00000080;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -68,12 +93,12 @@ body { font: var(--fs-body)/1.4 var(--font-ui); color: var(--fg); background: va
 .btn-secondary:active { background: var(--ghost-pressed); }
 .btn-ghost { color: var(--fg); }
 .btn-ghost:hover { background: var(--subtle-hover); }
-.btn-ghost:active { background: #00000026; }
+.btn-ghost:active { background: var(--press); }
 .btn:disabled { opacity: .35; cursor: default; background: transparent; }
 /* Tooltip (toolkit: dark bubble with arrow) */
 [data-tip]:hover::after, [data-tip]:focus-visible::after {
   content: attr(data-tip); position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-  background: var(--fg); color: #fff; font: 400 var(--fs-small)/1.3 var(--font-ui); padding: 6px 10px; border-radius: 6px; white-space: nowrap; z-index: 20; pointer-events: none; }
+  background: var(--fg); color: var(--bg); font: 400 var(--fs-small)/1.3 var(--font-ui); padding: 6px 10px; border-radius: 6px; white-space: nowrap; z-index: 20; pointer-events: none; }
 [data-tip]:hover::before, [data-tip]:focus-visible::before {
   content: ""; position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-bottom-color: var(--fg); border-top: 0; z-index: 20; }
 
@@ -81,6 +106,8 @@ body { font: var(--fs-body)/1.4 var(--font-ui); color: var(--fg); background: va
 .previewbar [data-tip]:hover::after, .previewbar [data-tip]:focus-visible::after { top: auto; bottom: calc(100% + 8px); }
 .previewbar [data-tip]:hover::before, .previewbar [data-tip]:focus-visible::before { top: auto; bottom: calc(100% + 3px); border-bottom: 0; border-top: 5px solid var(--fg); }
 /* --- Top bar + Tab Bar (static) --- */
+#themeBtn[data-tip]:hover::after { left: auto; right: 0; transform: none; }
+body[data-tab=library] #saveBtn, body[data-tab=library] #download { display: none; }
 .topbar { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; background: var(--bg); border-radius: var(--r-card); padding: 0 var(--s4); min-height: 64px; position: relative; z-index: 5; }
 
 .topbar h1 { font: italic 900 17px/1 var(--font-ui); text-transform: uppercase; letter-spacing: .01em; margin: 0 var(--s4) 0 0; white-space: nowrap; }
@@ -96,7 +123,7 @@ body { font: var(--fs-body)/1.4 var(--font-ui); color: var(--fg); background: va
 body:not([data-tab=tool]) .tool-only { display: none !important; }
 
 /* colour pairs */
-.pair { width: 40px; height: 32px; border: 0; border-radius: var(--r-pill); cursor: pointer; display: grid; place-items: center; font: italic 900 13px var(--font-ui); box-shadow: inset 0 0 0 1px #0000001a; }
+.pair { width: 40px; height: 32px; border: 0; border-radius: var(--r-pill); cursor: pointer; display: grid; place-items: center; font: italic 900 13px var(--font-ui); box-shadow: inset 0 0 0 1px var(--line-soft); }
 .pair[aria-pressed=true] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--highlight); }
 
 /* --- Dropdown (label inside, chevron) --- */
@@ -156,7 +183,7 @@ input[type=range]:active::-webkit-slider-thumb { background: var(--highlight-pre
 .switch-track { width: 32px; height: 18px; border-radius: 9px; border: 1px solid var(--highlight); position: relative; }
 .switch-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--highlight); transition: left .15s; }
 .switch input:checked + .switch-track { background: var(--highlight); }
-.switch input:checked + .switch-track::after { left: 17px; background: #fff; }
+.switch input:checked + .switch-track::after { left: 17px; background: var(--on-highlight); }
 
 /* --- Work area --- */
 #tool, #animation { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: var(--s3); }
@@ -173,7 +200,7 @@ input[type=range]:active::-webkit-slider-thumb { background: var(--highlight-pre
 .anim-aside { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--s3); }
 .moments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s3); }
 .moment { display: grid; grid-template-columns: 96px minmax(0, 1fr); grid-template-rows: auto auto; gap: var(--s2) var(--s3); padding-bottom: var(--s3); border-bottom: 1px solid var(--bg-tertiary); }
-.moment-thumb { width: 96px; border-radius: var(--s1); box-shadow: inset 0 0 0 1px #0000001a; grid-row: span 2; align-self: start; }
+.moment-thumb { width: 96px; border-radius: var(--s1); box-shadow: inset 0 0 0 1px var(--line-soft); grid-row: span 2; align-self: start; }
 .moment-body { display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
 .moment-actions { display: flex; gap: 2px; grid-column: 2; }
 .progress { display: flex; flex-direction: column; gap: var(--s1); }
@@ -218,7 +245,7 @@ aside { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; 
 .grad-stage { position: relative; width: 100%; max-height: 170px; align-self: center; }
 .grad-tools-row { display: flex; align-items: center; gap: var(--s2); }
 .grad-tools-row .modes { flex: 1; min-width: 0; }
-.grad-canvas { display: block; width: 100%; height: 100%; border-radius: var(--s1); box-shadow: inset 0 0 0 1px #0000001a; }
+.grad-canvas { display: block; width: 100%; height: 100%; border-radius: var(--s1); box-shadow: inset 0 0 0 1px var(--line-soft); }
 .grad-overlay { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; touch-action: none; }
 .grad-overlay:focus { outline: none; }
 .grad-overlay .axis { stroke: #fff; stroke-width: 1.5; filter: drop-shadow(0 0 1px #0009); }
@@ -233,7 +260,7 @@ aside { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; 
 .grad-overlay .del circle { fill: #fff; stroke: #00000040; }
 .grad-overlay .del path { stroke: var(--fg); stroke-width: 1.6; stroke-linecap: round; }
 .stops { position: relative; padding-bottom: 18px; margin: 0 9px; }
-.stops-bar { height: 24px; border-radius: var(--s1); box-shadow: inset 0 0 0 1px #0000001f; cursor: copy; }
+.stops-bar { height: 24px; border-radius: var(--s1); box-shadow: inset 0 0 0 1px var(--line-soft); cursor: copy; }
 .stops-bar[data-tip]:hover::after, .stops-bar[data-tip]:hover::before { display: none; }
 .stops-markers { position: absolute; left: 0; right: 0; bottom: 0; height: 18px; }
 .stop { position: absolute; top: 0; width: 16px; height: 18px; margin-left: -8px; padding: 0; border: 0; border-radius: 3px; background: var(--swatch); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--stroke); cursor: ew-resize; touch-action: none; }
@@ -304,9 +331,10 @@ dialog.modal::backdrop { background: #0000004d; }
     <button type="button" class="tab" role="tab" data-tab="library" aria-selected="false" data-icon="library">Bibliothek <span id="libCount" class="count"></span></button>
   </nav>
   <span class="spacer"></span>
-  <div class="group tool-only">
+  <div class="group">
+    <button type="button" class="btn btn-icon btn-ghost btn-medium" id="themeBtn" aria-label="Dunkel / hell" data-tip="Dunkel / hell"></button>
     <button type="button" class="btn btn-icon btn-secondary btn-medium" id="saveBtn" aria-label="In Bibliothek speichern" data-tip="In Bibliothek speichern" data-icon="save"></button>
-    <button type="button" id="download" class="btn btn-icon btn-primary btn-medium" aria-label="SVG herunterladen" data-tip="SVG herunterladen" data-icon="download"></button>
+    <button type="button" id="download" class="btn btn-icon btn-primary btn-medium tool-only" aria-label="SVG herunterladen" data-tip="SVG herunterladen" data-icon="download"></button>
   </div>
 </header>
 

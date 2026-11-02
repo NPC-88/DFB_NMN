@@ -29,8 +29,10 @@ import down from '../../assets/icons/arrow-down.svg';
 import moment from '../../assets/icons/bookmark.svg';
 import video from '../../assets/icons/play.svg';
 import record from '../../assets/icons/record.svg';
+import sun from '../../assets/icons/sun.svg';
+import moon from '../../assets/icons/moon.svg';
 
-const ICONS = { add, remove, close, chevron, download, edit, trash, share, reset, undo, redo: undo, fit, zoomIn, zoomOut, save, library, tool, success, error, info, flip, rotate, play, pause, up, down, moment, video, record };
+const ICONS = { add, remove, close, chevron, download, edit, trash, share, reset, undo, redo: undo, fit, zoomIn, zoomOut, save, library, tool, success, error, info, flip, rotate, play, pause, up, down, moment, video, record, sun, moon };
 
 // <span class="icon">…svg…</span>; redo is undo mirrored.
 export function icon(name, size = 20) {

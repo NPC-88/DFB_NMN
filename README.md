@@ -39,8 +39,10 @@ npm test
   and forth. Live preview. Export **MP4** (H.264, Chrome / Edge / Safari) or **GIF**, 100 % or 50 %,
   25 / 30 fps (GIF 25), with progress and cancel.
 - **Bibliothek** tab: saved patterns (with their moments) as previews; open, copy link, rename, delete.
-- **Export:** SVG in the pattern colour only, no background: outlined paths (exact weights),
-  paths + hidden live text, or live text only. Videos include the background colour.
+- **Export:** SVG as outlined paths in the pattern colour only, no background. Videos include the
+  background colour.
+- **Hell / dunkel:** the sun/moon button switches the interface; it follows the system until
+  chosen and is remembered per browser.
 
 ### Team library (Firebase, free)
 

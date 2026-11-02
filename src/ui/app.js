@@ -25,6 +25,27 @@ export function startApp({ fontBytes, host, store }) {
 
   const $ = (s) => document.querySelector(s);
   hydrateIcons();
+
+  // Light / dark: follows the system until the viewer picks one (remembered).
+  const THEME_KEY = 'dfb-pattern-theme';
+  const sysDark = window.matchMedia('(prefers-color-scheme: dark)');
+  const isDark = () => document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : sysDark.matches;
+  try { const t = localStorage.getItem(THEME_KEY); if (t) document.documentElement.dataset.theme = t; } catch { /* storage blocked */ }
+  const themeBtn = $('#themeBtn');
+  const syncTheme = () => {
+    const dark = isDark();
+    themeBtn.replaceChildren(icon(dark ? 'sun' : 'moon', 20));
+    themeBtn.dataset.tip = dark ? 'Helles Design' : 'Dunkles Design';
+    themeBtn.setAttribute('aria-label', themeBtn.dataset.tip);
+  };
+  themeBtn.addEventListener('click', () => {
+    const next = isDark() ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem(THEME_KEY, next); } catch { /* storage blocked */ }
+    syncTheme();
+  });
+  sysDark.addEventListener('change', syncTheme);
+  syncTheme();
   const viewport = $('#viewport'), stage = $('#stage'), art = $('#art');
   const pair = () => COLOR_PAIRS.find((c) => c.id === pairId) || COLOR_PAIRS[0];
 
