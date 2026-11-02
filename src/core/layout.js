@@ -76,7 +76,6 @@ export function layoutPattern(font, params) {
     if (p.align === 'justify' && wi < limit) justify(runs, W);
     lines.push({ baseline, runs, start, count: runs.length });
   }
-  const filled = lines.length === rows;
 
   // Second pass: the first and last rows may lack accents or commas; move the
   // rows so their real ink touches the top and bottom edge.
@@ -84,7 +83,8 @@ export function layoutPattern(font, params) {
     const first = lines[0], last = lines[lines.length - 1];
     const t = first.baseline - rowInk(first).top, b = rowInk(last).bottom - last.baseline;
     // fill: spread to the bottom edge; count: keep the row pitch, start at the top
-    const b0 = t, b1 = filled ? H - b : t + (lines.length - 1) * s * Math.max(0.5, p.lineHeight);
+    // rows keep exactly the chosen line spacing (no stretching), starting at the top edge
+    const b0 = t, b1 = t + (lines.length - 1) * s * Math.max(0.5, p.lineHeight);
     lines.forEach((l, i) => { l.baseline = lines.length > 1 ? b0 + (i * (b1 - b0)) / (lines.length - 1) : b0; });
   }
   for (const l of lines) l.top = l.baseline - s * 0.5 - ((font.ascent + font.descent) / 2) * scale;   // line box, as Figma

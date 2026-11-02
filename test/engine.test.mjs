@@ -71,7 +71,7 @@ test('layout: starts in the top-left corner, never cut at top/bottom; row ends p
     const m = engine.layout({ ...base, width, height, fontSize, unit, align });
     const k = ink(m);
     const tag = `${width}x${height}@${fontSize} ${align}`;
-    assert.ok(Math.abs(k.y0) < 0.01 && Math.abs(k.y1 - height) < 0.01, tag + ' top and bottom edges');
+    assert.ok(Math.abs(k.y0) < 0.01 && k.y1 <= height + 0.01 && height - k.y1 < fontSize * 1.3, tag + ' starts at the top, nothing cut at the bottom');
     for (const [a, b] of k.rows) {
       assert.ok(Math.abs(a) < 0.01, tag + ' row starts at the left edge');
       if (align === 'justify') assert.ok(Math.abs(b - width) < 0.01, tag + ' row ends at the right edge');
@@ -182,4 +182,9 @@ test('repetitions: count mode places the text n times, from the top, nothing cut
   assert.ok(m.lines.at(-1).baseline < base.height / 2);
   const tight = engine.layout({ ...base, lineHeight: 0.75 });
   assert.ok(tight.lines.length > engine.layout(base).lines.length);
+});
+
+test('line spacing changes the row pitch continuously, not in jumps', () => {
+  const pitch = (lh) => engine.layout({ ...base, lineHeight: lh }).rowPitch;
+  for (const lh of [0.8, 0.81, 0.82, 1, 1.01, 1.02]) assert.ok(Math.abs(pitch(lh) - base.fontSize * lh) < 1e-6, String(lh));
 });
