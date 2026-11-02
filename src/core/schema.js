@@ -8,11 +8,13 @@ const mode = (...m) => (p) => m.includes(p.field.mode);
 export const SCHEMA = [
   { group: 'Text', id: 'text', open: false, controls: [
     { key: 'text', type: 'textarea', label: 'Text' },
+    { key: 'repeat', type: 'segmented', label: 'Wiederholung', options: [['fill', 'Fläche füllen'], ['count', 'Anzahl']] },
+    { key: 'repeatCount', type: 'range', label: 'Wie oft', min: 1, max: 60, step: 1, when: (p) => p.repeat === 'count' },
   ] },
   { group: 'Typografie', id: 'type', open: true, controls: [
     { key: 'align', type: 'segmented', label: 'Zeilenende', options: [['cut', 'Angeschnitten'], ['ragged', 'Flattersatz'], ['justify', 'Bündig']] },
     { key: 'fontSize', type: 'range', label: 'Schriftgröße', min: 8, max: 300, step: 0.5, unit: 'px' },
-    { key: 'lineHeight', type: 'range', label: 'Zeilenabstand', min: 1, max: 1.6, step: 0.01, unit: '×' },
+    { key: 'lineHeight', type: 'range', label: 'Zeilenabstand', min: 0.6, max: 1.6, step: 0.01, unit: '×' },
   ] },
   { group: 'Verlauf', id: 'gradient', open: true, controls: [
     { key: 'field.bands', type: 'range', label: 'Anzahl Wellen', min: 0.25, max: 12, step: 0.05, when: mode('waves') },
@@ -23,6 +25,8 @@ export const SCHEMA = [
     { key: 'field.waves', type: 'range', label: 'Wellen', min: 0, max: 1, step: 0.005, when: mode('parametric') },
     { key: 'field.bend', type: 'range', label: 'Wellenstärke', min: 0, max: 0.5, step: 0.005, when: (p) => p.field.mode === 'parametric' && p.field.waves > 0 },
     { key: 'field.size', type: 'range', label: 'Größe', min: 0, max: 1, step: 0.005, when: mode('points') },
+    { key: 'field.steps', type: 'segmented', label: 'Stufen', options: [['0', 'Stufenlos'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']] },
+    { key: 'field.softness', type: 'range', label: 'Übergang weich', min: 0, max: 1, step: 0.01, when: (p) => p.field.steps >= 2 },
     { key: 'field.contrast', type: 'range', label: 'Kontrast', min: 0, max: 1, step: 0.005 },
   ] },
 ];

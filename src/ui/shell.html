@@ -42,28 +42,28 @@
   --r-input: 12px; --r-card: 8px; --r-pill: 160px;
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s6: 24px;
 }
-/* Dark: the toolkit's on-emphasis colours (gold #A9936F on graphite). Follows the
+/* Dark: "Colors Dark" of the MNM UI Library (black page, #262626 surfaces, gold #A9936F). Follows the
    system unless the viewer picked a theme with the switch (data-theme). */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --fg: #f2f2f2; --fg-2: #b4b6ba; --fg-muted: #a1a5ac;
-  --highlight: #a9936f; --highlight-hover: #baa98c; --highlight-pressed: #8f7b5a; --on-highlight: #1a1a1a;
-  --bg: #1f1f1f; --bg-page: #141414; --bg-tertiary: #303133;
-  --stroke: #6b6f75; --stroke-muted: #4a4d52; --stroke-strong: #f2f2f2;
+  --fg: #ffffff; --fg-2: #ffffffb5; --fg-muted: #ffffff80;
+  --highlight: #a9936f; --highlight-hover: #cabda6; --highlight-pressed: #8f7b5a; --on-highlight: #000000;
+  --bg: #262626; --bg-page: #000000; --bg-tertiary: #3e4043;
+  --stroke: #d2d5d9; --stroke-muted: #686b6f; --stroke-strong: #ffffff;
   --ghost-hover: #a9936f33; --ghost-pressed: #a9936f59; --subtle: #ffffff08; --subtle-hover: #ffffff1a; --press: #ffffff26;
   --focus: #5eb1ff;
-  --error: #e07a7a; --error-bg: #3a2020; --success: #57b892; --success-bg: #163229;
-  --line-soft: #ffffff1f; --shadow-card: 0 8px 20px #00000080;
+  --error: #ff7d7d; --error-bg: #321111; --success: #3db990; --success-bg: #062017;
+  --line-soft: #ffffff1f; --shadow-card: 0 8px 20px #000000b3;
   color-scheme: dark;
 } }
 :root[data-theme="dark"] {
-  --fg: #f2f2f2; --fg-2: #b4b6ba; --fg-muted: #a1a5ac;
-  --highlight: #a9936f; --highlight-hover: #baa98c; --highlight-pressed: #8f7b5a; --on-highlight: #1a1a1a;
-  --bg: #1f1f1f; --bg-page: #141414; --bg-tertiary: #303133;
-  --stroke: #6b6f75; --stroke-muted: #4a4d52; --stroke-strong: #f2f2f2;
+  --fg: #ffffff; --fg-2: #ffffffb5; --fg-muted: #ffffff80;
+  --highlight: #a9936f; --highlight-hover: #cabda6; --highlight-pressed: #8f7b5a; --on-highlight: #000000;
+  --bg: #262626; --bg-page: #000000; --bg-tertiary: #3e4043;
+  --stroke: #d2d5d9; --stroke-muted: #686b6f; --stroke-strong: #ffffff;
   --ghost-hover: #a9936f33; --ghost-pressed: #a9936f59; --subtle: #ffffff08; --subtle-hover: #ffffff1a; --press: #ffffff26;
   --focus: #5eb1ff;
-  --error: #e07a7a; --error-bg: #3a2020; --success: #57b892; --success-bg: #163229;
-  --line-soft: #ffffff1f; --shadow-card: 0 8px 20px #00000080;
+  --error: #ff7d7d; --error-bg: #321111; --success: #3db990; --success-bg: #062017;
+  --line-soft: #ffffff1f; --shadow-card: 0 8px 20px #000000b3;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -266,6 +266,9 @@ aside { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; 
 .stop { position: absolute; top: 0; width: 16px; height: 18px; margin-left: -8px; padding: 0; border: 0; border-radius: 3px; background: var(--swatch); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--stroke); cursor: ew-resize; touch-action: none; }
 .stop::before { content: ""; position: absolute; left: 4px; top: -5px; border: 4px solid transparent; border-bottom-color: var(--stroke); border-top: 0; }
 .stop.sel { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--focus); }
+.stop-quick { display: flex; gap: 4px; align-items: center; }
+.stop-quick button { width: 22px; height: 22px; border-radius: 4px; border: 0; cursor: pointer; box-shadow: inset 0 0 0 1px var(--stroke-muted); padding: 0; }
+.stop-quick .label { font-size: var(--fs-small); color: var(--fg-2); margin-right: 4px; }
 .stop-row { display: grid; grid-template-columns: minmax(0, 1fr) repeat(4, auto); gap: 2px; align-items: end; }
 
 /* --- Library (Cards) --- */

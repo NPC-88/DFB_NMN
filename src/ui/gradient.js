@@ -43,7 +43,18 @@ export function createGradientEditor(root, ctx) {
   const stopAdd = iconButton('add', 'Stopp hinzufügen');
   stopRow.append(stopSlider.node, stopDel, stopAdd, flip, turn);
 
-  root.append(modes.node, typeBar, stage, stopsWrap, stopRow);
+  // Quick values for the selected stop: leicht (white), mittel, schwer (black).
+  const quick = el('div', { class: 'stop-quick' });
+  quick.append(el('span', { class: 'label' }, 'Stopp auf'));
+  for (const [v, name] of [[0, 'Weiß = leicht'], [0.5, 'Grau = mittel'], [1, 'Schwarz = schwer']]) {
+    const g = Math.round((1 - v) * 255);
+    const b = el('button', { type: 'button', 'aria-label': name, 'data-tip': name });
+    b.style.background = `rgb(${g},${g},${g})`;
+    b.addEventListener('click', () => setStop(selStop, { value: v }, false));
+    quick.append(b);
+  }
+
+  root.append(modes.node, typeBar, stage, stopsWrap, stopRow, quick);
 
   let selStop = 1;
   let selPoint = 0;

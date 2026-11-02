@@ -70,7 +70,8 @@ function make(c, ctx) {
       return { node: wrap, set: (v) => { t.checked = !!v; } };
     }
     case 'segmented':
-      return chips(c.label, c.options, (v) => ctx.set(c.key, v));
+      // numeric options ('3') are stored as numbers
+      return chips(c.label, c.options, (v) => ctx.set(c.key, /^-?\d+(\.\d+)?$/.test(v) ? +v : v));
     case 'range':
     default:
       return slider(c, (v, transient) => ctx.set(c.key, v, { transient }));
@@ -91,7 +92,7 @@ export function chips(label, options, onPick, { small = false } = {}) {
   wrap.append(row);
   return {
     node: wrap,
-    set: (v) => btns.forEach((b) => { const on = b.dataset.value === v; b.setAttribute('aria-checked', String(on)); b.classList.toggle('active', on); }),
+    set: (v) => btns.forEach((b) => { const on = b.dataset.value === String(v); b.setAttribute('aria-checked', String(on)); b.classList.toggle('active', on); }),
   };
 }
 

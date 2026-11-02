@@ -167,3 +167,19 @@ test('layout: line spacing sets the minimum row pitch', () => {
   assert.ok(b.lines.length < a.lines.length);
   assert.ok(b.rowPitch >= base.fontSize * 1.4 - 1e-6);
 });
+
+test('steps: values gather on n levels, softness only shapes the transitions', () => {
+  const f3 = createField({ ...base.field, mode: 'ramp', wobble: 0, angle: 0, steps: 3, softness: 0.2 }, 1000, 10);
+  const vals = Array.from({ length: 101 }, (_, i) => f3(i * 10, 5));
+  const near = vals.filter((v) => [0, 0.5, 1].some((l) => Math.abs(v - l) < 0.05)).length;
+  assert.ok(near > 70, `most values on the 3 levels (${near}/101)`);
+  for (let i = 1; i < vals.length; i++) assert.ok(vals[i] >= vals[i - 1] - 1e-9, 'still rises smoothly');
+});
+
+test('repetitions: count mode places the text n times, from the top, nothing cut', () => {
+  const m = engine.layout({ ...base, text: 'Mit dir', repeat: 'count', repeatCount: 5 });
+  assert.equal(m.lines.flatMap((l) => l.runs).length, 10);
+  assert.ok(m.lines.at(-1).baseline < base.height / 2);
+  const tight = engine.layout({ ...base, lineHeight: 0.75 });
+  assert.ok(tight.lines.length > engine.layout(base).lines.length);
+});

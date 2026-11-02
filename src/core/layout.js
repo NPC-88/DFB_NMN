@@ -20,6 +20,8 @@ export const LAYOUT_DEFAULTS = {
   minWeight: 145, maxWeight: 1000,
   reverse: false,            // false: dark/heavy where the gradient is high
   lineHeight: 1,             // minimum row pitch × font size; rows then spread to fill the height
+  repeat: 'fill',            // 'fill' (repeat until the frame is full) | 'count'
+  repeatCount: 3,            // with 'count': how often the text appears
   field: {},                 // see field.js
   plan: null,                // optional: rows from an earlier layout (model.plan) — same words on
                              // the same rows at the same height; used by animations so words
@@ -43,6 +45,7 @@ export function layoutPattern(font, params) {
   const inkTop = top * scale, inkBottom = -bottom * scale;
   const span = H - inkTop - inkBottom;
   const plan = p.plan && p.plan.rows && p.plan.rows.length ? p.plan.rows : null;
+  const limit = p.repeat === 'count' ? words.length * Math.max(1, Math.round(p.repeatCount)) : Infinity;
   const rows = plan ? plan.length : Math.max(1, Math.floor(span / (s * Math.max(0.5, p.lineHeight))) + 1);
   const pitch = rows > 1 ? span / (rows - 1) : 0;
 
@@ -58,6 +61,7 @@ export function layoutPattern(font, params) {
     const start = wi;
     for (let guard = 0; guard < 10000; guard++) {
       if (plan && runs.length >= plan[r].count) break;
+      if (wi >= limit) break;
       const word = words[wi % words.length];
       if (runs.length) x += spaceAdvance(lastWeight(runs));
       const run = placeWord(word, x, midY, lineWeight);
@@ -68,16 +72,19 @@ export function layoutPattern(font, params) {
       x = run.end;
       if (!plan && inkRight(run) > W) break;                   // reached (or crossed) the right edge
     }
-    if (p.align === 'justify') justify(runs, W);
+    if (!runs.length) break;                                   // text used up ('count')
+    if (p.align === 'justify' && wi < limit) justify(runs, W);
     lines.push({ baseline, runs, start, count: runs.length });
   }
+  const filled = lines.length === rows;
 
   // Second pass: the first and last rows may lack accents or commas; move the
   // rows so their real ink touches the top and bottom edge.
   if (lines.length && !plan) {
     const first = lines[0], last = lines[lines.length - 1];
     const t = first.baseline - rowInk(first).top, b = rowInk(last).bottom - last.baseline;
-    const b0 = t, b1 = H - b;
+    // fill: spread to the bottom edge; count: keep the row pitch, start at the top
+    const b0 = t, b1 = filled ? H - b : t + (lines.length - 1) * s * Math.max(0.5, p.lineHeight);
     lines.forEach((l, i) => { l.baseline = lines.length > 1 ? b0 + (i * (b1 - b0)) / (lines.length - 1) : b0; });
   }
   for (const l of lines) l.top = l.baseline - s * 0.5 - ((font.ascent + font.descent) / 2) * scale;   // line box, as Figma

@@ -48,6 +48,7 @@ export const HYMNE = {
     unit: 'letter',
     align: 'cut',
     lineHeight: 1,
+    repeat: 'fill', repeatCount: 3,
     minWeight: 160, maxWeight: 1000,
     field: {
       mode: 'waves',
@@ -56,6 +57,7 @@ export const HYMNE = {
       size: 0.5,
       points: [{ x: 0.3, y: 0.35, r: 0.18 }, { x: 0.7, y: 0.65, r: 0.22 }],
       stops: [{ pos: 0, value: 0 }, { pos: 1, value: 1 }],
+      steps: 0, softness: 0.5,
       contrast: 0, offset: 0.5,
     },
   },
