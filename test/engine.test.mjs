@@ -188,3 +188,11 @@ test('line spacing changes the row pitch continuously, not in jumps', () => {
   const pitch = (lh) => engine.layout({ ...base, lineHeight: lh }).rowPitch;
   for (const lh of [0.8, 0.81, 0.82, 1, 1.01, 1.02]) assert.ok(Math.abs(pitch(lh) - base.fontSize * lh) < 1e-6, String(lh));
 });
+
+test('steps: the grey width control widens and narrows the middle level', () => {
+  const share = (spread) => {
+    const f = createField({ ...base.field, mode: 'ramp', wobble: 0, angle: 0, steps: 3, softness: 0.1, stepSpread: spread }, 1000, 10);
+    let n = 0; for (let i = 0; i < 1000; i += 5) { const v = f(i, 5); if (v > 0.25 && v < 0.75) n++; } return n;
+  };
+  assert.ok(share(0.9) > share(0.5) && share(0.5) > share(0.1));
+});

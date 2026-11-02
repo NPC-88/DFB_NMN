@@ -26,6 +26,7 @@ export const SCHEMA = [
     { key: 'field.bend', type: 'range', label: 'Wellenstärke', min: 0, max: 0.5, step: 0.005, when: (p) => p.field.mode === 'parametric' && p.field.waves > 0 },
     { key: 'field.size', type: 'range', label: 'Größe', min: 0, max: 1, step: 0.005, when: mode('points') },
     { key: 'field.steps', type: 'segmented', label: 'Stufen', options: [['0', 'Stufenlos'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']] },
+    { key: 'field.stepSpread', type: 'range', label: 'Graustufen-Breite', min: 0, max: 1, step: 0.01, when: (p) => p.field.steps >= 2 },
     { key: 'field.softness', type: 'range', label: 'Übergang weich', min: 0, max: 1, step: 0.01, when: (p) => p.field.steps >= 2 },
     { key: 'field.contrast', type: 'range', label: 'Kontrast', min: 0, max: 1, step: 0.005 },
   ] },

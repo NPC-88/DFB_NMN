@@ -39,6 +39,8 @@ export const FIELD_DEFAULTS = {
   stops: [{ pos: 0, value: 0 }, { pos: 1, value: 1 }],
   steps: 0,           // 0 = stepless; 2..5 = that many clear weight levels
   softness: 0.5,      // with steps: 0 = hard edges, 1 = very soft transitions between levels
+  stepSpread: 0.5,    // with steps: width of the in-between (grey) levels, 0.5 = even;
+                      // higher = wider grey zones, lower = narrower
   contrast: 0,        // 0..1 → ×1..×4
   offset: 0.5,        // 0..1 → lighter..heavier, 0.5 = neutral
 };
@@ -51,8 +53,12 @@ export function createField(params, width, height) {
   const levels = p.steps >= 2 ? Math.round(p.steps) : 0;
   const soft = Math.max(0.02, p.softness ?? 0.5);
   // Steps: a staircase whose risers are smooth ramps (width = softness).
+  // spread: squeeze (wider grey) or stretch (narrower grey) the field around
+  // its middle before stepping; 0.5 leaves it as is.
+  const spreadK = Math.pow(2, (0.5 - (p.stepSpread ?? 0.5)) * 4);
   const step = (v) => {
     if (!levels) return v;
+    v = clamp01(0.5 + (v - 0.5) * spreadK);
     const x = clamp01(v) * (levels - 1), i = Math.min(levels - 2, Math.floor(x)), f = x - i;
     return (i + smoothstep((f - 0.5) / soft + 0.5)) / (levels - 1);
   };

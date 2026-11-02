@@ -63,7 +63,7 @@ export function fieldAt(baseField, anim, t) {
 // The mode and the parametric type cannot blend: they switch halfway.
 export function blendField(A, B, k) {
   const out = { ...(k < 0.5 ? A : B) };
-  for (const key of ['bands', 'phase', 'wobble', 'wobbleFreq', 'wobblePhase', 'waves', 'bend', 'size', 'softness', 'contrast', 'offset']) {
+  for (const key of ['bands', 'phase', 'wobble', 'wobbleFreq', 'wobblePhase', 'waves', 'bend', 'size', 'softness', 'stepSpread', 'contrast', 'offset']) {
     if (typeof A[key] === 'number' && typeof B[key] === 'number') out[key] = lerp(A[key], B[key], k);
   }
   if (typeof A.angle === 'number' && typeof B.angle === 'number') {
